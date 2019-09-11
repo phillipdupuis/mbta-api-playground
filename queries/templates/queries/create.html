@@ -1,0 +1,218 @@
+{% extends 'core/base.html' %}
+{% load widget_tweaks %}
+
+{% block content %}
+    
+    <div class="container">
+        <h2 class="bd-title py-md-3">Create a query</h2>
+        <p>Select an object, any additional objects you'd like to include, and the attributes (i.e. columns) that you want in the results.</p>
+        <hr>
+        <form action="" method="post">{% csrf_token %}
+            <div class="form-group{% if form.primary_object.errors %} invalid{% endif %}">
+                {{ form.primary_object.label_tag }}
+                {{ form.primary_object|add_class:'form-control form-control-lg' }}
+                {% for error in form.primary_object.errors %}
+                    <p class="help-block">{{ error }}</p>
+                {% endfor %}
+            </div>
+            <hr>
+            <div class="form-group{% if form.includes.errors %} invalid{% endif %}">
+                {{ form.includes.label_tag }}
+                {{ form.includes }}
+                {% for error in form.includes.errors %}
+                    <p class="help-block">{{ error }}</p>
+                {% endfor %}
+            </div>
+            <hr>
+            <div class="form-group{% if form.attributes.errors %} invalid{% endif %}">
+                {{ form.attributes.label_tag }}
+                {{ form.attributes }}
+                {% for error in form.attributes.errors %}
+                    <p class="help-block">{{ error }}</p>
+                {% endfor %}
+            </div>
+            <div class="form-group">
+                <label for="id_filters_table">Filters</label>
+                <table class="table" id="id_filters_table">
+                </table>
+            </div>
+            <hr>
+<!--             <table class="table">
+                {{ filters.management_form }}
+
+                {% for form in filters.forms %}
+                    {% if forloop.first %}
+                        <thead>
+                        <tr>
+                            {% for field in form.visible_fields %}
+                                <th>{{ field.label|capfirst }}</th>
+                            {% endfor %}
+                        </tr>
+                        </thead>
+                    {% endif %}
+                    <tr class="{% cycle row1 row2 %} formset_row">
+                        {% for field in form.visible_fields %}
+                            <td>
+                                {# Include the hidden fields in the form #}
+                                {% if forloop.first %}
+                                    {% for hidden in form.hidden_fields %}
+                                        {{ hidden }}
+                                    {% endfor %}
+                                {% endif %}
+                                {{ field.errors.as_ul }}
+                                {{ field }}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </table> -->
+            <!-- <input type="submit" value="Search"/> -->
+            <button type="submit" class="save btn btn-primary btn-lg">Get Results</button>
+        </form>
+    </div>
+    <script type='text/javascript'>
+        // init 
+        let objectsData = {{ objects_data|safe }};
+        let includesData = {{ includes_data|safe }};
+        let filtersData = {{ filters_data|safe }};
+        let primaryObjectPk = null;
+        let includedObjectPks = [];
+        let filters = [];
+        let primaryObjectElem = document.getElementById('id_primary_object');
+        let includesElem = document.getElementById('id_includes');
+        let attributesElem = document.getElementById('id_attributes');
+        let filtersTableElem = document.getElementById('id_filters_table');
+        // set event triggers
+        primaryObjectElem.onchange = onChangePrimaryObject;
+        includesElem.onchange = onChangeIncludes;
+        // set initial values
+        updateIncludes();
+        updateAttributes();
+        updateFilters();
+
+        // helper functions 
+        function removeItemFromArray(item, array) {
+            if (array.includes(item)) {
+                array.splice(array.indexOf(item), 1);
+            };
+        }
+
+        function objectIncludes(objectPk) {
+            return (objectPk) ? objectsData[objectPk]['includes'].map(String) : [];
+        }
+
+        function objectAttributes(objectPk) {
+            return (objectPk) ? objectsData[objectPk]['attributes'].map(String) : [];
+        }
+
+        function uncheckAll(parentElem) {
+            parentElem.querySelectorAll('input[type="checkbox"]').forEach(e => {e.checked = false});
+        }
+
+        function checkAllVisible(parentElem) {
+            let visibleChildren = Array.from(parentElem.children).filter(e => !e.hidden);
+            visibleChildren.map(e => e.querySelector('input[type=checkbox]')).forEach(checkboxElem => {
+                checkboxElem.checked = true;
+            })
+        }
+
+        // onchange functions 
+        function onChangePrimaryObject(event) {
+            primaryObjectPk = event.target.value;
+            includedObjectPks = [];
+            updateIncludes();
+            updateAttributes();
+            updateFilters();
+        }
+
+        function onChangeIncludes(event) {
+            let pk = event.target.value;
+            let associatedObjectPk = includesData[pk]['associatedObject'];
+            if (!associatedObjectPk) {
+                // pass
+            } else if (event.target.checked) {
+                addToIncludedObjectPks(associatedObjectPk);
+                updateAttributes();
+            } else {
+                removeFromIncludedObjectPks(associatedObjectPk);
+                updateAttributes();
+            };
+        }
+
+        function addToIncludedObjectPks(pk) {
+            if (primaryObjectPk === pk || includedObjectPks.includes(pk)) {
+                // pass 
+            } else {
+                includedObjectPks.push(pk);
+            };
+        }
+
+        function removeFromIncludedObjectPks(pk) {
+            removeItemFromArray(pk, includedObjectPks);
+        }
+
+        function updateIncludes() {
+            let valuesToShow = objectIncludes(primaryObjectPk);
+            uncheckAll(includesElem);
+            Array.from(includesElem.children).forEach(
+                childElem => {
+                    let value = childElem.querySelector('input').value;
+                    childElem.hidden = (valuesToShow.includes(value)) ? false : true;
+                }
+            );
+        }
+
+        function updateAttributes() {
+            let valuesSet = new Set();
+            let allObjectPks = [primaryObjectPk].concat(includedObjectPks).map(Number);
+            allObjectPks.forEach(pk => {
+                objectAttributes(pk).forEach(item => valuesSet.add(item));
+            });
+            let valuesToShow = Array.from(valuesSet);
+            uncheckAll(attributesElem);
+            Array.from(attributesElem.children).forEach(
+                childElem => {
+                    let value = childElem.querySelector('input').value;
+                    childElem.hidden = (valuesToShow.includes(value)) ? false : true;
+                }
+            );
+            checkAllVisible(attributesElem);
+        }
+
+        function updateFilters() {
+            filtersTableElem.parentNode.hidden = true;
+            filtersTableElem.querySelectorAll('*').forEach(node => node.remove());
+            if (true) {
+                // do nothing 
+            } else if (!primaryObjectPk) {
+                filtersTableElem.hidden = true;
+                filters = [];
+            } else {
+                filtersTableElem.hidden = false;
+                let thead = document.createElement('thead');
+                let tbody = document.createElement('tbody');
+                filtersTableElem.append(thead);
+                filtersTableElem.append(tbody);
+                // header row
+                let tr = document.createElement('tr');
+                thead.append(tr);
+                ['cat', 'bat', 'dog'].forEach(n => {
+                    let th = document.createElement('th');
+                    th.scope = 'col';
+                    th.textContent = n;
+                    tr.append(th);
+                });
+                // let's do two rows cuz why not
+                [1, 2, 3].forEach(x => {
+                    let tr = document.createElement('tr');
+                    tbody.append(tr);
+                    [1, 2, 3].forEach(v => {
+                        td = document.createElement('td');
+                        td.textContent = v;
+                        tr.append(td);
+                    });
+                });
+            }
+        }
+    </script>
+{% endblock %}
