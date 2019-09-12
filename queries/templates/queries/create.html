@@ -1,4 +1,5 @@
 {% extends 'core/base.html' %}
+{% load static %}
 {% load widget_tweaks %}
 {% block content %}
 <div class="container">
@@ -8,7 +9,8 @@
     <form action="" method="post">{% csrf_token %}
         <div class="form-group{% if form.primary_object.errors %} invalid{% endif %}">
             {{ form.primary_object.label_tag }}
-            {{ form.primary_object|add_class:'form-control form-control-lg' }}
+            {% url 'params:objects' as api_endpoint %}
+            {% render_field form.primary_object class+="form-control form-control-lg" data-endpoint=api_endpoint %}
             {% for error in form.primary_object.errors %}
             <p class="help-block">{{ error }}</p>
             {% endfor %}
@@ -29,112 +31,86 @@
             <p class="help-block">{{ error }}</p>
             {% endfor %}
         </div>
-        <div class="form-group">
+        <hr>
+        <div hidden class="form-group">
             <label for="id_filters_table">Filters</label>
             <table class="table" id="id_filters_table">
             </table>
         </div>
-        <hr>
-        <!--             <table class="table">
-    {{ filters.management_form }}
-    {% for form in filters.forms %}
-        {% if forloop.first %}
-            <thead>
-                <tr>
-                    {% for field in form.visible_fields %}
-                        <th>{{ field.label|capfirst }}</th>
-                    {% endfor %}
-                </tr>
-            </thead>
-        {% endif %}
-        <tr class="{% cycle row1 row2 %} formset_row">
-            {% for field in form.visible_fields %}
-                <td>
-                    {# Include the hidden fields in the form #}
-                    {% if forloop.first %}
-                        {% for hidden in form.hidden_fields %}
-                            {{ hidden }}
-                        {% endfor %}
-                    {% endif %}
-                    {{ field.errors.as_ul }}
-                    {{ field }}
-                </td>
-            {% endfor %}
-        </tr>
-    {% endfor %}
-</table> -->
-        <!-- <input type="submit" value="Search"/> -->
         <button type="submit" class="save btn btn-primary btn-lg">Get Results</button>
     </form>
 </div>
+<script src="{% static 'js/queries-create.js' %}"></script>
 <script type='text/javascript'>
-// initialize variables
-const objectsEndpoint = "{% url 'params:objects' %}";
+// {#
+// // initialize variables
+// const objectsEndpoint = "{% url 'params:objects' %}";
 
-const primaryObjectElem = document.getElementById('id_primary_object');
-const includesElem = document.getElementById('id_includes');
-const attributesElem = document.getElementById('id_attributes');
-handleChangePrimaryObject('');
+// const primaryObjectElem = document.getElementById('id_primary_object');
+// const includesElem = document.getElementById('id_includes');
+// const attributesElem = document.getElementById('id_attributes');
+// handleChangePrimaryObject('');
 
-// event triggers
-primaryObjectElem.onchange = (event) => { handleChangePrimaryObject(event.target.value) };
+// // event triggers
+// primaryObjectElem.onchange = (event) => { handleChangePrimaryObject(event.target.value) };
 
-function handleChangePrimaryObject(pk) {
-    uncheckAll(includesElem);
-    uncheckAll(attributesElem);
-    hideAllChildren(includesElem);
-    hideAllChildren(attributesElem);
-    if (pk) {
-        fetch(objectsEndpoint + pk)
-            .then(response => response.json())
-            .then(objectData => {
-                console.log('objdata', objectData);
-                const includesToShow = objectData['includes'].map(item => item['id']).map(String);
-                const attributesToShow = objectData['attributes'].map(item => item['id']).map(String);
-                const showId = objectData['can_specify_id'];
-                showInputChildren(includesElem, includesToShow);
-                showInputChildren(attributesElem, attributesToShow);
-                checkAllVisible(attributesElem);
-            });
-    }
-}
+// function handleChangePrimaryObject(pk) {
+//     uncheckAll(includesElem);
+//     uncheckAll(attributesElem);
+//     hideAllChildren(includesElem);
+//     hideAllChildren(attributesElem);
+//     if (pk) {
+//         fetch(objectsEndpoint + pk)
+//             .then(response => response.json())
+//             .then(objectData => {
+//                 console.log('objdata', objectData);
+//                 const includesToShow = objectData['includes'].map(item => item['id']).map(String);
+//                 const attributesToShow = objectData['attributes'].map(item => item['id']).map(String);
+//                 const showId = objectData['can_specify_id'];
+//                 showInputChildren(includesElem, includesToShow);
+//                 showInputChildren(attributesElem, attributesToShow);
+//                 checkAllVisible(attributesElem);
+//             });
+//     }
+// }
 
-function uncheckAll(parentElem) {
-    parentElem.querySelectorAll('input[type="checkbox"]').forEach(e => { e.checked = false });
-}
+// function uncheckAll(parentElem) {
+//     parentElem.querySelectorAll('input[type="checkbox"]').forEach(e => { e.checked = false });
+// }
 
-function checkAllVisible(parentElem) {
-    let visibleChildren = Array.from(parentElem.children).filter(e => !e.hidden);
-    visibleChildren.map(e => e.querySelector('input[type=checkbox]')).forEach(checkboxElem => {
-        checkboxElem.checked = true;
-    })
-}
+// function checkAllVisible(parentElem) {
+//     let visibleChildren = Array.from(parentElem.children).filter(e => !e.hidden);
+//     visibleChildren.map(e => e.querySelector('input[type=checkbox]')).forEach(checkboxElem => {
+//         checkboxElem.checked = true;
+//     })
+// }
 
-function hideAllChildren(parentElem) {
-    Array.from(parentElem.children).forEach(childElem => {
-        childElem.hidden = true;
-    });
-}
+// function hideAllChildren(parentElem) {
+//     Array.from(parentElem.children).forEach(childElem => {
+//         childElem.hidden = true;
+//     });
+// }
 
-function showInputChildren(parentElem, valuesToShow) {
-    Array.from(parentElem.children)
-    .filter(elem => valuesToShow.includes(elem.querySelector('input').value))
-    .forEach(elem => elem.hidden = false);
-}
+// function showInputChildren(parentElem, valuesToShow) {
+//     Array.from(parentElem.children)
+//     .filter(elem => valuesToShow.includes(elem.querySelector('input').value))
+//     .forEach(elem => elem.hidden = false);
+// }
 
-function onChangeIncludes(event) {
-    let pk = event.target.value;
-    let associatedObjectPk = includesData[pk]['associatedObject'];
-    if (!associatedObjectPk) {
-        // pass
-    } else if (event.target.checked) {
-        addToIncludedObjectPks(associatedObjectPk);
-        updateAttributes();
-    } else {
-        removeFromIncludedObjectPks(associatedObjectPk);
-        updateAttributes();
-    };
-}
+// function onChangeIncludes(event) {
+//     let pk = event.target.value;
+//     let associatedObjectPk = includesData[pk]['associatedObject'];
+//     if (!associatedObjectPk) {
+//         // pass
+//     } else if (event.target.checked) {
+//         addToIncludedObjectPks(associatedObjectPk);
+//         updateAttributes();
+//     } else {
+//         removeFromIncludedObjectPks(associatedObjectPk);
+//         updateAttributes();
+//     };
+// }
+// #}
 
 //{#
 // function updateIncludes() {
