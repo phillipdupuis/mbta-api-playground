@@ -4,6 +4,7 @@ from django.views import generic
 from django.db import transaction
 from params.models import MbtaObject, MbtaInclude, MbtaFilter
 from .forms import QueryForm
+from params.views import ObjectList
 import json
 
 
@@ -13,15 +14,14 @@ class QueryCreate(generic.CreateView):
     success_url = reverse_lazy('home')
 
     def get_context_data(self, **kwargs):
-    	for objects in 
-        objects_data = {}
-        for obj in MbtaObject.objects.all():
-            objects_data[obj.pk] = {
-                'name': obj.name,
-                'includes': [inc.pk for inc in obj.includes.all()],
-                'attributes': [attr.pk for attr in obj.attributes.all()],
-                'filters': [f.pk for f in obj.filters.all()],
-            }
+        # objects_data = {}
+        # for obj in MbtaObject.objects.all():
+        #     objects_data[obj.pk] = {
+        #         'name': obj.name,
+        #         'includes': [inc.pk for inc in obj.includes.all()],
+        #         'attributes': [attr.pk for attr in obj.attributes.all()],
+        #         'filters': [f.pk for f in obj.filters.all()],
+        #     }
 
         includes_data = {}
         for inc in MbtaInclude.objects.all():
@@ -38,7 +38,9 @@ class QueryCreate(generic.CreateView):
             }
 
         context = super(QueryCreate, self).get_context_data(**kwargs)
-        context['objects_data'] = json.dumps(objects_data)
+        # context['objects_data'] = json.dumps(objects_data)
+        # objects_data = ObjectList.as_view()(self.request).render().content
+        # context['objects_data'] = objects_data
         context['includes_data'] = json.dumps(includes_data)
         context['filters_data'] = json.dumps(filters_data)
         return context

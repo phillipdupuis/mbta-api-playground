@@ -17,5 +17,4 @@ class QueryForm(forms.ModelForm):
         kwargs.setdefault('label_suffix', '')
         super(QueryForm, self).__init__(*args, **kwargs)
         self.fields['includes'].widget = CheckboxSelectMultiple()
-        print(self.fields['includes'].widget)
         self.fields['includes'].queryset = MbtaInclude.objects.all()
