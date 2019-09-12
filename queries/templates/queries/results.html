@@ -1,0 +1,118 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+{% block content %}
+<div class="modal fade" id="editColumnsModal" tabindex="-1" role="dialog" aria-labelledby="editColumnsModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editColumnsModalLabel">Columns displayed</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <ul id="columns_displayed">
+                    {% for column in results.df.columns %}
+                    <li>
+                        <input class="form-check-input" type="checkbox" id="{{ column }}" value="{{ column }}">
+                        <label class="form-check-label" for="{{ column }}">{{ column }}</label>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="editColumnsModalSaveButton" data-dismiss="modal">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% if results.error %}
+<p>{{ results.error }}</p>
+<p>{{ results.error_detail }}</p>
+{% elif results.data_frame.empty %}
+<p>No data</p>
+{% else %}
+<!-- navbar -->
+<ul class="nav nav-tabs" id="resultTab" role="tablist">
+    <li class="nav-item">
+        <a class="nav-link active" data-toggle="tab" href="#summary" id="id_tab_summary" role="tab" aria-controls="summary" aria-selected="true">Summary</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-toggle="tab" href="#full-table" id="id_tab_table" role="tab" aria-controls="full-table" aria-selected="false">Table</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-toggle="tab" href="#python-code" id="id_tab_python_code" role="tab" aria-controls="python-code" aria-selected="false">Python code</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-toggle="tab" href="#graphs" id="id_tab_graphs" role="tab" aria-controls="graphs" aria-selected="false">Graphs</a>
+    </li>
+</ul>
+<!-- tab panes -->
+<div class="tab-content my-3">
+    <!-- summary -->
+    <div class="tab-pane active p-3" id="summary" role="tabpanel" aria-labelledby="id_tab_summary">
+    	<dl class="row">
+    		<dt class="col-sm-3">URL</dt>
+    		<dd class="col-sm-9">{{ results.response.url|urlizetrunc:50 }}</dd>
+    		<dt class="col-sm-3">Response size</dt>
+    		<dd class="col-sm-9">{{ results.response_size_bytes|filesizeformat }}</dd>
+    		<dt class="col-sm-3">Primary Object</dt>
+    		<dd class="col-sm-9">{{ query.primary_object }}</dd>
+    		{% if query.includes.all.count > 0 %}
+    			<dt class="col-sm-3">Includes</dt>
+    			<dd class="col-sm-9">{{ query.includes.all|join:", " }}</dd>
+    		{% endif %}
+    		<dt class="col-sm-3">Attributes</dt>
+    		<dd class="col-sm-9">{{ query.attributes.all|join:", " }}</dd>
+    	</dl>
+    </div>
+    <!-- full table -->
+    <div class="tab-pane p-3" id="full-table" role="tabpanel" aria-labelledby="id_tab_table">
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+            <h1 class="h2">Full Results</h1>
+            <div class="btn-toolbar mb-2 mb-md-0">
+                <div class="btn-group mr-2">
+                    <a href="{% url 'queries:results-csv' query.pk %}" class="btn btn-sm btn-outline-secondary" role="button">Export to CSV</a>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#editColumnsModal">Columns displayed</button>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-striped">
+                <thead>
+                    <tr>
+                        {% for col in results.df.columns %}
+                        <th scope="col" id="{{ col }}">{{ col }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in results.data_frame_rows %}
+                    <tr id="{{ row.id }}">
+                        {% for cell in row.cells %}
+                        <td id="{{ cell.row_id }}|{{ cell.col_id }}">
+                            {{ cell.value }}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <!-- python code -->
+    <div class="tab-pane p-3" id="python-code" role="tabpanel" aria-labelledby="id_tab_python_code">
+        <p>PYTHON COOOODE</p>
+    </div>
+    <!-- graphs -->
+    <div class="tab-pane p-3" id="graphs" role="tabpanel" aria-labelledby>
+        <div class="col-md-8 align-items-center" id="id_graphs">
+            <p>GRAAAAAAAAPHS</p>
+            {# <button class="btn btn-primary" id="create_graph_button" data-create-graph-url="{% url 'create-graph' pk=query.pk %}">Create graph</button> #}
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock content %}

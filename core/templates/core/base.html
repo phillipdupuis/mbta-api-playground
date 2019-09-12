@@ -23,19 +23,12 @@
                     <a class="nav-link" href="#">Home<span class="sr-only">(current)</span></a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'params:objects' %}">Link</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'queries:create' %}">Create Query</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link disabled" href="#">Disabled</a>
+                    <a class="nav-link" href="#">About</a>
                 </li>
             </ul>
-            <form class="form-inline my-2 my-lg-0">
-                <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
-                <button class="btn btn-primary my-2 my-sm-0" type="submit">Create query</button>
-            </form>
+            {% if request.resolver_match.url_name != 'create' %}
+                <a href="{% url 'queries:create' %}" class="btn btn-primary my-2 my-sm-0"role="button">Create query</a>
+            {% endif %}
         </div>
     </header>
     <div class="container-fluid">
