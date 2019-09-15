@@ -49,8 +49,9 @@ class Query(models.Model):
     def get_results(self, request):
         """ Get results. Use the session cache to store them for quick access """
         key = f'query_{self.id}_results'
-        if key in request.session:
+        if key in request.session and False:
             results = request.session[key]
+            print('got it from cacheeee')
         else:
             results = Results(self.get_response())
             request.session[key] = results
@@ -102,6 +103,8 @@ class Request(models.Model):
         params = OrderedDict()
         if self.query.includes.all().exists():
             params['include'] = ','.join((x.name for x in self.query.includes.all()))
+        for f in self.query.filters.all():
+            params[f'filter[{f.on_attribute.name}]'] = f.values
         return params
 
     def get(self) -> requests.Response:
@@ -155,6 +158,7 @@ class Results:
 def create_DataFrame(response: requests.Response) -> pd.DataFrame:
     """ Creates a pandas DataFrame from the MBTA API response """
     main_df = pd.DataFrame(response.json()['data'])
+    print('columns', main_df.columns)
     assert main_df['type'].nunique() == 1
     main_type = main_df['type'].unique()[0]
     main_df = clean_DataFrame(main_df)
@@ -167,7 +171,11 @@ def create_DataFrame(response: requests.Response) -> pd.DataFrame:
             inc_df = prefix_DataFrame_columns(inc_df, f'{inc_type}_')
 
             main_id_column = f'{main_type}_{inc_type}'
+            if main_id_column == 'line_route':
+                main_id_column = 'line_routes'
             inc_id_column = f'{inc_type}_id'
+            print('main_columns', main_df.columns)
+            print('inc_columns', inc_df.columns)
 
             main_df = main_df.merge(inc_df, how='left', left_on=main_id_column, right_on=inc_id_column)
             main_df.drop(columns=[main_id_column], inplace=True)
@@ -182,16 +190,41 @@ def clean_DataFrame(df: pd.DataFrame) -> pd.DataFrame:
             return x.apply(get_data_id)
         else:
             try:
+                # Need to account for if DATA is a list. Huh. 
                 return x['data']['id']
             except (TypeError, KeyError):
                 return None
 
-    attributes = df['attributes'].apply(pd.Series)
+    # Drop the useless columns first
+    df = df.drop(columns=['links', 'type'])
+
+    if 'attributes' in df.columns:
+        attributes = df['attributes'].apply(pd.Series)
+        df = df.drop(columns=['attributes']).join(attributes)
+
     if 'relationships' in df.columns:
         relationships = df['relationships'].apply(pd.Series).apply(get_data_id)
-        return df.drop(columns=['links', 'type', 'attributes', 'relationships']).join(attributes).join(relationships)
-    else:
-        return df.drop(columns=['links', 'type', 'attributes']).join(attributes)
+        df = df.drop(columns=['relationships']).join(relationships)
+
+    if 'properties' in df.columns:
+        def transform_props_list_to_dict(props_list):
+            return {prop['name']: prop['value'] for prop in props_list}
+        properties = df['properties'].map(transform_props_list_to_dict).apply(pd.Series)
+        df = df.drop(columns=['properties']).join(properties)
+
+    return df
+
+
+    # if 'properties' in df.columns:
+    #     print('doin it')
+    #     df = extract_properties(df)
+
+    # attributes = df['attributes'].apply(pd.Series)
+    # if 'relationships' in df.columns:
+    #     relationships = df['relationships'].apply(pd.Series).apply(get_data_id)
+    #     return df.drop(columns=['links', 'type', 'attributes', 'relationships']).join(attributes).join(relationships)
+    # else:
+    #     return df.drop(columns=['links', 'type', 'attributes']).join(attributes)
 
 
 def prefix_DataFrame_columns(df: pd.DataFrame, prefix: str) -> pd.DataFrame:

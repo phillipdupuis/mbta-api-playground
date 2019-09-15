@@ -4,6 +4,8 @@ from .models import MbtaObject, MbtaInclude, MbtaFilter, MbtaAttribute
 
 def main():
     print('Making sure the database is initialized...')
+    # for x in (MbtaObject, MbtaInclude, MbtaFilter, MbtaAttribute):
+    #     x.objects.all().delete()
     init_MbtaObject()
     init_MbtaInclude()
     init_MbtaFilter()
@@ -28,12 +30,21 @@ def create_MbtaObject(path, api_doc) -> MbtaObject:
     name = api_doc['paths'][path]['get']['tags'][0]
     description = api_doc['paths'][path]['get']['description']
     can_specify_id = True if (path + r'/{id}') in api_doc['paths'] else False
+    requires_filters = object_requires_filters(name)
     return MbtaObject.objects.create(
         path=path,
         name=name,
         description=description,
         can_specify_id=can_specify_id,
+        requires_filters=requires_filters,
     )
+
+
+def object_requires_filters(name):
+    if name in ('LiveFacility', 'Prediction', 'Schedule', 'Service', 'Shape', 'Trip'):
+        return True
+    else:
+        return False
 
 
 def init_MbtaInclude():

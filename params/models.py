@@ -10,6 +10,7 @@ class MbtaObject(models.Model):
     name = models.CharField(max_length=50, unique=True)
     description = models.TextField()
     can_specify_id = models.BooleanField(default=False)
+    requires_filters = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['name']

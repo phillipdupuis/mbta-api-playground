@@ -55,7 +55,7 @@
     <div class="tab-pane active p-3" id="summary" role="tabpanel" aria-labelledby="id_tab_summary">
     	<dl class="row">
     		<dt class="col-sm-3">URL</dt>
-    		<dd class="col-sm-9">{{ results.response.url|urlizetrunc:50 }}</dd>
+    		<dd class="col-sm-9">{{ results.response.url|urlizetrunc:100 }}</dd>
     		<dt class="col-sm-3">Response size</dt>
     		<dd class="col-sm-9">{{ results.response_size_bytes|filesizeformat }}</dd>
     		<dt class="col-sm-3">Primary Object</dt>
@@ -71,12 +71,11 @@
     <!-- full table -->
     <div class="tab-pane p-3" id="full-table" role="tabpanel" aria-labelledby="id_tab_table">
         <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
-            <h1 class="h2">Full Results</h1>
             <div class="btn-toolbar mb-2 mb-md-0">
                 <div class="btn-group mr-2">
-                    <a href="{% url 'queries:results-csv' query.pk %}" class="btn btn-sm btn-outline-secondary" role="button">Export to CSV</a>
+                    <a href="{% url 'queries:results-csv' query.pk %}" class="btn btn-sm btn-secondary" role="button">Export to CSV</a>
                 </div>
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#editColumnsModal">Columns displayed</button>
+                <button type="button" class="btn btn-sm btn-secondary" data-toggle="modal" data-target="#editColumnsModal">Edit columns displayed</button>
             </div>
         </div>
         <div class="table-responsive">
@@ -110,7 +109,7 @@
     <div class="tab-pane p-3" id="graphs" role="tabpanel" aria-labelledby>
         <div class="col-md-8 align-items-center" id="id_graphs">
             <p>GRAAAAAAAAPHS</p>
-            {# <button class="btn btn-primary" id="create_graph_button" data-create-graph-url="{% url 'create-graph' pk=query.pk %}">Create graph</button> #}
+            <button class="btn btn-primary" id="create_graph_button" data-create-graph-url="{% url 'queries:results-create-graph' pk=query.pk %}">Create graph</button>
         </div>
     </div>
 </div>

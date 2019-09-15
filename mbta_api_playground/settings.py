@@ -41,7 +41,6 @@ INSTALLED_APPS = [
     'widget_tweaks',
     'params',
     'queries',
-    'results',
     'core',
 ]
 
