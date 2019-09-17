@@ -1,15 +1,39 @@
-import requests
+from django.db.migrations.executor import MigrationExecutor
+from django.db import connections, DEFAULT_DB_ALIAS
 from .models import MbtaObject, MbtaInclude, MbtaFilter, MbtaAttribute
+import requests
 
 
 def main():
-    print('Making sure the database is initialized...')
-    # for x in (MbtaObject, MbtaInclude, MbtaFilter, MbtaAttribute):
-    #     x.objects.all().delete()
-    init_MbtaObject()
-    init_MbtaInclude()
-    init_MbtaFilter()
-    init_MbtaAttribute()
+    if db_is_initialized():
+        print('DataBase is already initialized')
+    elif unapplied_migrations_exist():
+        print('Can not initialize the DataBase until all migrations have been applied')
+    else:
+        print('Initializing the DataBase')
+        init_MbtaObject()
+        init_MbtaInclude()
+        init_MbtaFilter()
+        init_MbtaAttribute()
+
+
+def unapplied_migrations_exist() -> bool:
+    """
+    Check if there are database migrations that have not been applied yet.
+    If so, we can't run the init because it may be dependent on those migrations.
+    """
+    connection = connections[DEFAULT_DB_ALIAS]
+    connection.prepare_database()
+    executor = MigrationExecutor(connection)
+    targets = executor.loader.graph.leaf_nodes()
+    if executor.migration_plan(targets):
+        return True
+    else:
+        return False
+
+
+def db_is_initialized() -> bool:
+    return MbtaObject.objects.all().exists()
 
 
 def get_api_doc() -> dict:

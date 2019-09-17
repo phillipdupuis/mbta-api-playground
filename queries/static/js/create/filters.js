@@ -1,9 +1,6 @@
 import * as data from './data.js';
 import elements from './elements.js';
 
-const filtersElem = document.getElementById('id_filters');
-const filtersListElem = document.getElementById('filters_list');
-
 // Adding/editing/removing filters
 export function add(filters) {
     filters
@@ -20,19 +17,20 @@ export function add(filters) {
             input.onclick = () => editFilter(input);
             input.dataset.id = filter.id;
             input.dataset.name = filter.name;
+            input.dataset.forObject = filter.for_object;
             input.dataset.associatedObject = (filter.associated_object) ? filter.associated_object : '';
             // put it all together
             const elem = document.createElement('div');
             elem.className = 'input-group mb-2';
             elem.append(label);
             elem.append(input);
-            filtersListElem.append(elem);
+            elements.filtersList.append(elem);
         });
 }
 
 
 export function remove() {
-    removeAllChildElements(filtersListElem);
+    removeAllChildElements(elements.filtersList);
 }
 
 
@@ -49,10 +47,11 @@ async function editFilter(filterInput) {
     modal.querySelector('.modal-title').innerText = `Filters: ${filterInput.dataset.name}`;
     // Set the body content
     const body = modal.querySelector('.modal-body');
+    body.scrollTop = 0;
     removeAllChildElements(body);
     const ul = document.createElement('ul');
     const options = await getFilterChoices(filterInput);
-    const selectedValues = JSON.parse(filtersElem.value)[filterInput.dataset.id] || [];
+    const selectedValues = JSON.parse(elements.filters.value)[filterInput.dataset.id] || [];
     options.sort().forEach(value => {
         const li = document.createElement('li');
         const inputHtml = `<input class="form-check-input" type="checkbox" id="${value}" value="${value}" ${(selectedValues.includes(value)) ? 'checked' : ''}>`;
@@ -73,54 +72,21 @@ function handleSaveFilter(filterInput) {
     checkboxes.filter(e => e.checked).forEach(e => values.push(String(e.value)));
     filterInput.value = values.join(',');
     //
-    let obj = JSON.parse(filtersElem.value);
+    let obj = JSON.parse(elements.filters.value);
     if (values.length === 0) {
         delete obj[filterInput.dataset.id];
     } else {
         obj[filterInput.dataset.id] = values;
     }
-    filtersElem.value = JSON.stringify(obj);
+    elements.filters.value = JSON.stringify(obj);
     //
     $('#modal').modal('hide');
 }
 
 async function getFilterChoices(filterInput) {
-    if (filterInput.dataset.associatedObject) {
-        const objectData = await data.getObjectData(filterInput.dataset.associatedObject);
-        const response = await fetch('https://api-v3.mbta.com' + objectData['path']);
-        const json = await response.json();
-        return json['data'].map(item => item['id']);
-    } else {
-        const primaryObjectData = await data.getObjectData(document.getElementById('id_primary_object').value);
-        const bleh = await fetch('https://api-v3.mbta.com' + primaryObjectData['path']);
-        const json = await bleh.json();
-        const name = filterInput.dataset.name;
-        let choices = new Set();
-        searchArrayForValues(json['data'], name, choices);
-        return Array.from(choices).sort();
-    }
-}
-
-function searchArrayForValues(arr, valueName, outputSet) {
-    arr.forEach(item => {
-        if (Array.isArray(item)) {
-            searchArrayForValues(item, valueName, outputSet);
-        } else if (typeof item === 'object' && (item !== null)) {
-            searchObjectForValues(item, valueName, outputSet);
-        }
-    });
-}
-
-function searchObjectForValues(obj, valueName, outputSet) {
-    if (valueName in obj) {
-        outputSet.add(obj[valueName]);
-    } else {
-        Object.values(obj).forEach(v => {
-            if (Array.isArray(v)) {
-                searchArrayForValues(v, valueName, outputSet);
-            } else if (typeof v === 'object' && (v !== null)) {
-                searchObjectForValues(v, valueName, outputSet);
-            }
-        });
-    }
+    const objectData = await data.getObjectData(filterInput.dataset.forObject);
+    const objectName = objectData.name;
+    const filterName = filterInput.dataset.name; 
+    const choices = await data.getSetOfUniqueValues(objectName, filterName);
+    return Array.from(choices).sort();
 }

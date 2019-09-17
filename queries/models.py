@@ -3,6 +3,7 @@ from django.conf import settings
 from django.utils import timezone
 from typing import List
 from collections import OrderedDict
+import json
 import requests
 import pandas as pd
 from params.models import MbtaObject, MbtaInclude, MbtaAttribute, MbtaFilter
@@ -150,9 +151,9 @@ class Results:
 
         return [data_frame_row(row, self.df) for row in self.df.index[:100]]
 
-    # @property
-    # def data_frame_as_html(self):
-    #     return convert_DataFrame_to_html_table(self.df[self.columns_shown])
+    @property
+    def pretty_json(self) -> str:
+        return json.dumps(self.response.json(), sort_keys=True, indent=4)
 
 
 def create_DataFrame(response: requests.Response) -> pd.DataFrame:

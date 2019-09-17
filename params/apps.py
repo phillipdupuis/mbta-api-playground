@@ -5,6 +5,5 @@ class ParamsConfig(AppConfig):
     name = 'params'
 
     def ready(self):
-        pass
-#         from . import db_init
-#         db_init.main()
+        from . import db_init
+        db_init.main()

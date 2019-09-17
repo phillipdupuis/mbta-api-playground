@@ -43,7 +43,7 @@
         <a class="nav-link" data-toggle="tab" href="#full-table" id="id_tab_table" role="tab" aria-controls="full-table" aria-selected="false">Table</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" data-toggle="tab" href="#python-code" id="id_tab_python_code" role="tab" aria-controls="python-code" aria-selected="false">Python code</a>
+        <a class="nav-link" data-toggle="tab" href="#raw-data" id="id_tab_raw_data" role="tab" aria-controls="raw-data" aria-selected="false">Raw Data</a>
     </li>
     <li class="nav-item">
         <a class="nav-link" data-toggle="tab" href="#graphs" id="id_tab_graphs" role="tab" aria-controls="graphs" aria-selected="false">Graphs</a>
@@ -67,6 +67,10 @@
     		<dt class="col-sm-3">Attributes</dt>
     		<dd class="col-sm-9">{{ query.attributes.all|join:", " }}</dd>
     	</dl>
+        <button type="button" class="btn btn-link" data-toggle="collapse" data-target="#resultsJson" aria-expanded="false" aria-controls="resultsJson">Response JSON</button>
+        <div class="collapse" id="resultsJson">
+            <pre>{{ results.pretty_json }}</pre>
+        </div>
     </div>
     <!-- full table -->
     <div class="tab-pane p-3" id="full-table" role="tabpanel" aria-labelledby="id_tab_table">
@@ -101,9 +105,9 @@
             </table>
         </div>
     </div>
-    <!-- python code -->
-    <div class="tab-pane p-3" id="python-code" role="tabpanel" aria-labelledby="id_tab_python_code">
-        <p>PYTHON COOOODE</p>
+    <!-- raw data -->
+    <div class="tab-pane p-3" id="raw-data" role="tabpanel" aria-labelledby="id_tab_raw_data">
+        <pre>{{ results.pretty_json }}</pre>
     </div>
     <!-- graphs -->
     <div class="tab-pane p-3" id="graphs" role="tabpanel" aria-labelledby>
