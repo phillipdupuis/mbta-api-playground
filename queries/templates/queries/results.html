@@ -2,6 +2,7 @@
 {% load static %}
 {% load widget_tweaks %}
 {% block content %}
+{% include "core/modal.html" %}
 <div class="modal fade" id="editColumnsModal" tabindex="-1" role="dialog" aria-labelledby="editColumnsModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -43,7 +44,7 @@
         <a class="nav-link" data-toggle="tab" href="#full-table" id="id_tab_table" role="tab" aria-controls="full-table" aria-selected="false">Table</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" data-toggle="tab" href="#raw-data" id="id_tab_raw_data" role="tab" aria-controls="raw-data" aria-selected="false">Raw Data</a>
+        <a class="nav-link" data-toggle="tab" href="#raw-data" id="id_tab_raw_data" role="tab" aria-controls="raw-data" aria-selected="false">JSON</a>
     </li>
     <li class="nav-item">
         <a class="nav-link" data-toggle="tab" href="#graphs" id="id_tab_graphs" role="tab" aria-controls="graphs" aria-selected="false">Graphs</a>
@@ -67,10 +68,6 @@
     		<dt class="col-sm-3">Attributes</dt>
     		<dd class="col-sm-9">{{ query.attributes.all|join:", " }}</dd>
     	</dl>
-        <button type="button" class="btn btn-link" data-toggle="collapse" data-target="#resultsJson" aria-expanded="false" aria-controls="resultsJson">Response JSON</button>
-        <div class="collapse" id="resultsJson">
-            <pre>{{ results.pretty_json }}</pre>
-        </div>
     </div>
     <!-- full table -->
     <div class="tab-pane p-3" id="full-table" role="tabpanel" aria-labelledby="id_tab_table">
@@ -82,12 +79,12 @@
                 <button type="button" class="btn btn-sm btn-secondary" data-toggle="modal" data-target="#editColumnsModal">Edit columns displayed</button>
             </div>
         </div>
-        <div class="table-responsive">
+        <div class="table-responsive" style="max-height:75vh;overflow-y:auto;">
             <table class="table table-sm table-striped">
-                <thead>
-                    <tr>
+                <thead class="thead-light sticky-top">
+                    <tr class="sticky-top">
                         {% for col in results.df.columns %}
-                        <th scope="col" id="{{ col }}">{{ col }}</th>
+                        <th scope="col" id="{{ col }}" class="sticky-top">{{ col }}</th>
                         {% endfor %}
                     </tr>
                 </thead>
@@ -110,12 +107,16 @@
         <pre>{{ results.pretty_json }}</pre>
     </div>
     <!-- graphs -->
+    <div hidden id='extra_df_data' data-column-types="{% autoescape off %}{{ results.column_dtypes }}{% endautoescape %}"></div>
     <div class="tab-pane p-3" id="graphs" role="tabpanel" aria-labelledby>
         <div class="col-md-8 align-items-center" id="id_graphs">
             <p>GRAAAAAAAAPHS</p>
-            <button class="btn btn-primary" id="create_graph_button" data-create-graph-url="{% url 'queries:results-create-graph' pk=query.pk %}">Create graph</button>
+            <button class="btn btn-primary" id="create_graph_button" data-results-url="{% url 'queries:results' pk=query.pk %}">Create graph</button>
         </div>
     </div>
 </div>
 {% endif %}
 {% endblock content %}
+{% block extrascripts %}
+    <script type="module" src="{% static 'js/results/graphs.js' %}"></script>
+{% endblock extrascripts %}

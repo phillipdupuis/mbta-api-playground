@@ -7,6 +7,8 @@ from .forms import QueryForm
 from .models import Query, QueryFilter
 from params.models import MbtaFilter
 import json
+from bokeh.plotting import figure, output_file, show
+from bokeh.embed import components, json_item
 
 
 class QueryCreate(generic.CreateView):
@@ -46,5 +48,36 @@ def results_as_csv(request, pk):
     return response
 
 
-def results_create_graph(request, pk):
-    pass
+def results_create_graph(request, pk, graph_type, column_one):
+    query = get_object_or_404(Query, pk=pk)
+    results = query.get_results(request)
+    
+    print('graph type', graph_type)
+    print('col one', column_one)
+    return HttpResponse('hi')
+
+
+
+
+def build_graph_from_params(request, pk, plot_type, x, y):
+    # x = [1, 2, 3, 4, 5]
+    # y = [1, 2, 3]
+    # plot = figure(title='blah', x_axis_label='x-ey', y_axis_label='whoknows', plot_width=400, plot_height=400)
+    # plot.line(x, y, line_width=2)
+    # data = json_item(plot, 'my_graph')
+    # new 
+    results = request.session[f'query_{pk}_results']
+    df = results.df
+    if plot_type == 'bar' and x == '---':
+        df = df.groupby(y)
+
+    data = pandas_highcharts.core.serialize(
+        df,
+        render_to='my_graph',
+        output_type='json',
+        kind=plot_type,
+    )
+    # import pdb; pdb.set_trace()
+    # dataNEW = JsonResponse(data)
+    # import pdb; pdb.set_trace()
+    return HttpResponse(data)

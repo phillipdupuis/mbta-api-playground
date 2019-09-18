@@ -106,6 +106,11 @@ class Request(models.Model):
             params['include'] = ','.join((x.name for x in self.query.includes.all()))
         for f in self.query.filters.all():
             params[f'filter[{f.on_attribute.name}]'] = f.values
+        for o in self.query.all_objects():
+            sel_attrs = [a.name for a in self.query.attributes.filter(for_object=o)]
+            all_attrs = [a.name for a in o.attributes.all()]
+            if sorted(sel_attrs) != sorted(all_attrs):
+                params[f'fields[{o.name.lower()}]'] = ",".join(sel_attrs)
         return params
 
     def get(self) -> requests.Response:
@@ -122,6 +127,7 @@ class Results:
         if response.ok:
             self.df = create_DataFrame(response)
             reduce_DataFrame_memory_usage(self.df)
+            print(self.df.dtypes)
             self.columns_shown = self.df.columns.tolist()
             self.error = None
             self.error_details = None
@@ -149,17 +155,20 @@ class Results:
                 self.id = row
                 self.cells = [data_frame_cell(row, col, df) for col in df.columns]
 
-        return [data_frame_row(row, self.df) for row in self.df.index[:100]]
+        return [data_frame_row(row, self.df) for row in self.df.index]
 
     @property
     def pretty_json(self) -> str:
         return json.dumps(self.response.json(), sort_keys=True, indent=4)
 
+    @property
+    def column_dtypes(self) -> dict:
+        return {col: self.df[col].dtype.name for col in self.df.columns}
+
 
 def create_DataFrame(response: requests.Response) -> pd.DataFrame:
     """ Creates a pandas DataFrame from the MBTA API response """
     main_df = pd.DataFrame(response.json()['data'])
-    print('columns', main_df.columns)
     assert main_df['type'].nunique() == 1
     main_type = main_df['type'].unique()[0]
     main_df = clean_DataFrame(main_df)
@@ -168,6 +177,10 @@ def create_DataFrame(response: requests.Response) -> pd.DataFrame:
         main_df = prefix_DataFrame_columns(main_df, f'{main_type}_')
 
         for inc_type, inc_df in pd.DataFrame(response.json()['included']).groupby('type'):
+
+            if main_type == 'route_pattern' and inc_type == 'trip':
+                inc_type = 'representative_trip'
+
             inc_df = clean_DataFrame(inc_df)
             inc_df = prefix_DataFrame_columns(inc_df, f'{inc_type}_')
 
@@ -175,8 +188,6 @@ def create_DataFrame(response: requests.Response) -> pd.DataFrame:
             if main_id_column == 'line_route':
                 main_id_column = 'line_routes'
             inc_id_column = f'{inc_type}_id'
-            print('main_columns', main_df.columns)
-            print('inc_columns', inc_df.columns)
 
             main_df = main_df.merge(inc_df, how='left', left_on=main_id_column, right_on=inc_id_column)
             main_df.drop(columns=[main_id_column], inplace=True)
@@ -190,6 +201,8 @@ def clean_DataFrame(df: pd.DataFrame) -> pd.DataFrame:
         if isinstance(x, pd.Series):
             return x.apply(get_data_id)
         else:
+            # if 'data' in x:
+            #     if 'id' in 
             try:
                 # Need to account for if DATA is a list. Huh. 
                 return x['data']['id']
@@ -213,19 +226,11 @@ def clean_DataFrame(df: pd.DataFrame) -> pd.DataFrame:
         properties = df['properties'].map(transform_props_list_to_dict).apply(pd.Series)
         df = df.drop(columns=['properties']).join(properties)
 
+    # if 'informed_entity' in df.columns:
+    #     informed_entity = df['informed_entity'].apply(pd.Series).stack().reset_index(level=1, drop=True).apply(pd.Series)
+    #     df = df.drop(columns=['informed_entity']).join(informed_entity, how='outer').reset_index(drop=True)
+
     return df
-
-
-    # if 'properties' in df.columns:
-    #     print('doin it')
-    #     df = extract_properties(df)
-
-    # attributes = df['attributes'].apply(pd.Series)
-    # if 'relationships' in df.columns:
-    #     relationships = df['relationships'].apply(pd.Series).apply(get_data_id)
-    #     return df.drop(columns=['links', 'type', 'attributes', 'relationships']).join(attributes).join(relationships)
-    # else:
-    #     return df.drop(columns=['links', 'type', 'attributes']).join(attributes)
 
 
 def prefix_DataFrame_columns(df: pd.DataFrame, prefix: str) -> pd.DataFrame:

@@ -24,7 +24,9 @@ async function handleChangePrimaryObject(pk) {
 	if (pk) {
 		const objectData = await data.getObjectData(pk);
 		
-		const includeIds = objectData['includes'].map(item => String(item['id']));
+		// const includeIds = objectData['includes'].map(item => String(item['id']));
+		console.log('kdfksfldka');
+		const includeIds = await data.objectIncludeIds(pk);
 		checkboxes.show(elements.includes, includeIds);
 
 		const attributeIds = objectData['attributes'].map(item => String(item['id']));
