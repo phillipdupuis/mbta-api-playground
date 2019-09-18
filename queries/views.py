@@ -1,13 +1,15 @@
 from django.shortcuts import get_object_or_404
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.urls import reverse, reverse_lazy
 from django.views import generic
 from django.db import transaction
+from django.conf import settings
 from .forms import QueryForm
 from .models import Query, QueryFilter
 from params.models import MbtaFilter
 import json
-from bokeh.plotting import figure, output_file, show
+from bokeh.plotting import figure, output_file, show, gmap
+from bokeh.models import ColumnDataSource, GMapOptions
 from bokeh.embed import components, json_item
 
 
@@ -48,36 +50,59 @@ def results_as_csv(request, pk):
     return response
 
 
-def results_create_graph(request, pk, graph_type, column_one):
+def results_create_graph(request, pk, div, plot_type, x_col=''):
     query = get_object_or_404(Query, pk=pk)
     results = query.get_results(request)
-    
-    print('graph type', graph_type)
-    print('col one', column_one)
-    return HttpResponse('hi')
+    if plot_type == 'bar':
+        value_counts = results.df[x_col].value_counts()
+        values = value_counts.index.values.tolist()
+        counts = value_counts.values.tolist()
+        plot = figure(x_range=values, plot_height=400, title=f'{x_col} counts')
+        plot.vbar(x=values, top=counts, width=0.9)
+        plot.y_range.start = 0
+        data = json_item(plot, div)
+        return JsonResponse(data)
 
 
-
-
-def build_graph_from_params(request, pk, plot_type, x, y):
-    # x = [1, 2, 3, 4, 5]
-    # y = [1, 2, 3]
-    # plot = figure(title='blah', x_axis_label='x-ey', y_axis_label='whoknows', plot_width=400, plot_height=400)
-    # plot.line(x, y, line_width=2)
-    # data = json_item(plot, 'my_graph')
-    # new 
-    results = request.session[f'query_{pk}_results']
-    df = results.df
-    if plot_type == 'bar' and x == '---':
-        df = df.groupby(y)
-
-    data = pandas_highcharts.core.serialize(
-        df,
-        render_to='my_graph',
-        output_type='json',
-        kind=plot_type,
+def results_create_graph_geo(request, pk, div):
+    query = get_object_or_404(Query, pk=pk)
+    results = query.get_results(request)
+    map_options = GMapOptions(
+        lat=results.df['latitude'].median(),
+        lng=results.df['longitude'].median(),
+        map_type='roadmap',
+        zoom=11,
     )
-    # import pdb; pdb.set_trace()
-    # dataNEW = JsonResponse(data)
-    # import pdb; pdb.set_trace()
-    return HttpResponse(data)
+    plot = gmap(settings.GOOGLE_MAPS_API_KEY, map_options, title="Phil's title")
+    source = ColumnDataSource(
+        data=dict(lat=results.df['latitude'].values.tolist(),
+                    lon=results.df['longitude'].values.tolist())
+    )
+    plot.circle(x='lon', y='lat', size=8, fill_color='blue', fill_alpha=0.8, source=source)
+    data = json_item(plot, div)
+    return JsonResponse(data)
+
+
+
+# def build_graph_from_params(request, pk, plot_type, x, y):
+#     # x = [1, 2, 3, 4, 5]
+#     # y = [1, 2, 3]
+#     # plot = figure(title='blah', x_axis_label='x-ey', y_axis_label='whoknows', plot_width=400, plot_height=400)
+#     # plot.line(x, y, line_width=2)
+#     # data = json_item(plot, 'my_graph')
+#     # new 
+#     results = request.session[f'query_{pk}_results']
+#     df = results.df
+#     if plot_type == 'bar' and x == '---':
+#         df = df.groupby(y)
+
+#     data = pandas_highcharts.core.serialize(
+#         df,
+#         render_to='my_graph',
+#         output_type='json',
+#         kind=plot_type,
+#     )
+#     # import pdb; pdb.set_trace()
+#     # dataNEW = JsonResponse(data)
+#     # import pdb; pdb.set_trace()
+#     return HttpResponse(data)

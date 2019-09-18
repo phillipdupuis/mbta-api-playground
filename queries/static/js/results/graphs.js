@@ -1,58 +1,93 @@
-const columnTypes = JSON.parse(document.getElementById('extra_df_data').dataset.columnTypes.replace(/'/g, '"'));
-const resultsEndpoint = document.getElementById('create_graph_button').dataset.resultsUrl;
+const plotParams = JSON.parse(document.getElementById('plot_params').textContent);
 
-document.getElementById('create_graph_button').onclick = (event) => {
-	const modal = document.getElementById('modal');
-    // Set the title 
-    modal.querySelector('.modal-title').innerText = `Create a graph`;
-    // Set the body content
-    const body = modal.querySelector('.modal-body');
-    body.scrollTop = 0;
-    while (body.firstChild) {
-    	body.removeChild(body.firstChild);
-    };
-    // Add element for selecting graph type
-    body.append(createSelect('Type', 'graph-type-input', ['bar']));
-    // If bar graph, want the categorical columns
-    const categoricalColumns = Object.entries(columnTypes).filter(([col, type]) => type === 'category').map(([col, type]) => col);
-    body.append(createSelect('Column', 'graph-column-input', categoricalColumns));
-    // Set the save function
-    modal.querySelector('#modal-save-btn').onclick = () => handleSaveGraphParams();
-    // Show the modal
-    $('#modal').modal('show');
+const graphForm = document.getElementById('graph_form');
+const graphFormElements = {
+    type: document.getElementById('graph_type'),
+    x: document.getElementById('graph_x'),
+    submitButton: document.getElementById('create_graph_btn'),
+}
+
+let graphCounter = 0;
+
+resetGraphForm();
+
+
+function resetGraphForm() {
+    resetType();
+    graphFormElements.submitButton.disabled = false;
+    graphFormElements.submitButton.innerHTML = 'Create';
 }
 
 
-async function handleSaveGraphParams() {
-	const type = document.getElementById('graph-type-input').value;
-	const columnOne = document.getElementById('graph-column-input').value;
-	const url = resultsEndpoint + 'create_graph/' + type + '/' + columnOne + '/';
-	const response = await fetch(url);
-	console.log('response', response);
-	$('#modal').modal('hide');
+function resetType() {
+    const elem = graphFormElements.type;
+    elem.value = '';
+    elem.required = true;
+    resetX();
 }
 
 
-function createSelect(label, id, options) {
-	const div = document.createElement('div');
-	div.className = 'form-group row';
-	const labelElem = document.createElement('label');
-	labelElem.htmlFor = id;
-	labelElem.className = 'col-sm-2 col-form-label';
-	labelElem.innerText = label;
-	const inputElem = document.createElement('div');
-	inputElem.className = 'col-sm-10';
-	const selectElem = document.createElement('select');
-	selectElem.className = 'form-control';
-	selectElem.id = id;
-	options.forEach(option => {
-		const optionElem = document.createElement('option');
-		optionElem.value = option;
-		optionElem.innerHTML = option;
-		selectElem.append(optionElem);
-	});
-	inputElem.append(selectElem);
-	div.append(labelElem);
-	div.append(inputElem);
-	return div;
+function resetX() {
+    const elem = graphFormElements.x;
+    while (elem.firstChild) {
+        elem.removeChild(elem.firstChild);
+    }
+    const type = graphFormElements.type.value;
+    if (type) {
+        const choices = plotParams.x_options_per_type[type];
+        choices.forEach(v => {
+            const option = document.createElement('option');
+            option.value = v;
+            option.innerHTML = v;
+            elem.append(option);
+        });
+        elem.required = (choices.length > 0) ? true : false;
+    }
+    elem.value = '';
 }
+
+
+graphFormElements.type.onchange = (event) => {
+    resetX();
+}
+
+
+graphForm.onsubmit = async (event) => {
+    event.preventDefault();
+    const baseUrl = graphFormElements.submitButton.dataset.endpoint;
+    const divId = getGraphDivId();
+    const type = graphFormElements.type.value;
+    let url;
+    if (type === 'geo') {
+        url = `${baseUrl}geo/${divId}/`;
+    } else {
+        const x = (graphFormElements.x.value) ? graphFormElements.x.value : '';
+        url = `${baseUrl}${divId}/${type}/${x}/`;
+    }
+    // show spinny thing 
+    graphFormElements.submitButton.disabled = true;
+    graphFormElements.submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...';
+    // fetch the data and embed the graph 
+    const response = await fetch(url);
+    const json = await response.json();
+    Bokeh.embed.embed_item(json);
+    // reset the graph form
+    resetGraphForm();
+}
+
+
+function getGraphDivId() {
+    graphCounter++;
+    //
+    const div = document.createElement('div');
+    div.id = `graph_${graphCounter}`;
+    div.className = 'card-body';
+    // put it inside a container element
+    const container = document.createElement('div');
+    container.className = 'card mt-2';
+    container.append(div);
+    document.getElementById('id_graphs').append(container);
+    //
+    return div.id;
+}
+
