@@ -8,9 +8,11 @@ from .forms import QueryForm
 from .models import Query, QueryFilter
 from params.models import MbtaFilter
 import json
-from bokeh.plotting import figure, output_file, show, gmap
-from bokeh.models import ColumnDataSource, GMapOptions
+from bokeh.plotting import figure, output_file, show
+from bokeh.models import ColumnDataSource
 from bokeh.embed import components, json_item
+from bokeh.tile_providers import get_provider, Vendors
+from utm import from_latlon
 
 
 class QueryCreate(generic.CreateView):
@@ -50,37 +52,58 @@ def results_as_csv(request, pk):
     return response
 
 
-def results_create_graph(request, pk, div, plot_type, x_col=''):
+def results_create_graph(request, pk, div, plot_type, x=None, y=None):
     query = get_object_or_404(Query, pk=pk)
     results = query.get_results(request)
+
     if plot_type == 'bar':
-        value_counts = results.df[x_col].value_counts()
+        value_counts = results.df[x].value_counts()
         values = value_counts.index.values.tolist()
         counts = value_counts.values.tolist()
-        plot = figure(x_range=values, plot_height=400, title=f'{x_col} counts')
+        plot = figure(x_range=[str(x) for x in values], plot_height=400, title=f'{x} counts')
         plot.vbar(x=values, top=counts, width=0.9)
         plot.y_range.start = 0
-        data = json_item(plot, div)
-        return JsonResponse(data)
 
+    elif plot_type == 'geo':
+        lat_lon = results.df[['latitude', 'longitude']].to_numpy()
+        mercator_stuff = [from_latlon(lat, lon)[:2] for (lat, lon) in lat_lon]
+        lat = [x[0] for x in mercator_stuff]
+        lon = [x[1] for x in mercator_stuff]
+        plot = figure(
+            # x_range=(int(longitude.min()), int(longitude.max())),
+            # y_range=(int(latitude.min()), int(latitude.max())),
+            # x_range=(-8015003, -7848024), y_range=(5086373, 5311971),
+            x_range=(min(lon), max(lon)),
+            y_range=(min(lat), max(lat)),
+            x_axis_type='mercator',
+            y_axis_type='mercator',
+        )
+        tile = get_provider(Vendors.CARTODBPOSITRON)
+        plot.add_tile(tile)
+        source = ColumnDataSource(data=dict(lat=lat, lon=lon))
+        plot.circle(x='lon', y='lat', size=8, fill_color='blue', fill_alpha=0.8, source=source)
 
-def results_create_graph_geo(request, pk, div):
-    query = get_object_or_404(Query, pk=pk)
-    results = query.get_results(request)
-    map_options = GMapOptions(
-        lat=results.df['latitude'].median(),
-        lng=results.df['longitude'].median(),
-        map_type='roadmap',
-        zoom=11,
-    )
-    plot = gmap(settings.GOOGLE_MAPS_API_KEY, map_options, title="Phil's title")
-    source = ColumnDataSource(
-        data=dict(lat=results.df['latitude'].values.tolist(),
-                    lon=results.df['longitude'].values.tolist())
-    )
-    plot.circle(x='lon', y='lat', size=8, fill_color='blue', fill_alpha=0.8, source=source)
     data = json_item(plot, div)
     return JsonResponse(data)
+
+
+# def results_create_graph_geo(request, pk, div):
+#     query = get_object_or_404(Query, pk=pk)
+#     results = query.get_results(request)
+#     map_options = GMapOptions(
+#         lat=results.df['latitude'].median(),
+#         lng=results.df['longitude'].median(),
+#         map_type='roadmap',
+#         zoom=11,
+#     )
+#     plot = gmap(settings.GOOGLE_MAPS_API_KEY, map_options, title="Phil's title")
+#     source = ColumnDataSource(
+#         data=dict(lat=results.df['latitude'].values.tolist(),
+#                     lon=results.df['longitude'].values.tolist())
+#     )
+#     plot.circle(x='lon', y='lat', size=8, fill_color='blue', fill_alpha=0.8, source=source)
+#     data = json_item(plot, div)
+#     return JsonResponse(data)
 
 
 

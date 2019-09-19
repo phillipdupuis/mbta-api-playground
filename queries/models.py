@@ -99,7 +99,7 @@ class Request(models.Model):
         return requests.compat.urljoin('https://api-v3.mbta.com', self.query.primary_object.path)
 
     def headers(self) -> dict:
-        return {'X-API-Key': 'e2950b1a1b674c69b331114062c458e1'}
+        return {'X-API-Key': settings.MBTA_API_KEY}
 
     def params(self) -> OrderedDict:
         params = OrderedDict()

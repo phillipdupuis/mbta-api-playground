@@ -59,7 +59,7 @@ graphForm.onsubmit = async (event) => {
     const type = graphFormElements.type.value;
     let url;
     if (type === 'geo') {
-        url = `${baseUrl}geo/${divId}/`;
+        url = `${baseUrl}${divId}/geo/`;
     } else {
         const x = (graphFormElements.x.value) ? graphFormElements.x.value : '';
         url = `${baseUrl}${divId}/${type}/${x}/`;
