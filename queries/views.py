@@ -12,7 +12,8 @@ from bokeh.plotting import figure, output_file, show
 from bokeh.models import ColumnDataSource
 from bokeh.embed import components, json_item
 from bokeh.tile_providers import get_provider, Vendors
-from utm import from_latlon
+from pyproj import Proj, transform
+import pandas as pd
 
 
 class QueryCreate(generic.CreateView):
@@ -65,23 +66,29 @@ def results_create_graph(request, pk, div, plot_type, x=None, y=None):
         plot.y_range.start = 0
 
     elif plot_type == 'geo':
-        lat_lon = results.df[['latitude', 'longitude']].to_numpy()
-        mercator_stuff = [from_latlon(lat, lon)[:2] for (lat, lon) in lat_lon]
-        lat = [x[0] for x in mercator_stuff]
-        lon = [x[1] for x in mercator_stuff]
+        proj_from = Proj(init='epsg:4326')
+        proj_to = Proj(init='epsg:3857')
+
+        def lat_lon_to_web_mercator(df_row):
+            x, y = transform(proj_from, proj_to, df_row.longitude, df_row.latitude)
+            return pd.Series({'x': x, 'y': y})
+
+        web_mercator = results.df.apply(lat_lon_to_web_mercator, axis=1)
+
+        # lat_lon = results.df[['latitude', 'longitude']].to_numpy()
+        # mercator_stuff = [from_latlon(lat, lon)[:2] for (lat, lon) in lat_lon]
+        # lat = [x[0] for x in mercator_stuff]
+        # lon = [x[1] for x in mercator_stuff]
         plot = figure(
-            # x_range=(int(longitude.min()), int(longitude.max())),
-            # y_range=(int(latitude.min()), int(latitude.max())),
-            # x_range=(-8015003, -7848024), y_range=(5086373, 5311971),
-            x_range=(min(lon), max(lon)),
-            y_range=(min(lat), max(lat)),
+            x_range=(web_mercator.x.min(), web_mercator.x.max()),
+            y_range=(web_mercator.y.min(), web_mercator.y.max()),
             x_axis_type='mercator',
             y_axis_type='mercator',
         )
         tile = get_provider(Vendors.CARTODBPOSITRON)
         plot.add_tile(tile)
-        source = ColumnDataSource(data=dict(lat=lat, lon=lon))
-        plot.circle(x='lon', y='lat', size=8, fill_color='blue', fill_alpha=0.8, source=source)
+        source = ColumnDataSource(data=dict(x=web_mercator.x.tolist(), y=web_mercator.y.tolist()))
+        plot.circle(x='x', y='y', size=8, fill_color='blue', fill_alpha=0.8, source=source)
 
     data = json_item(plot, div)
     return JsonResponse(data)
