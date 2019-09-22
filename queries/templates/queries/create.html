@@ -3,6 +3,11 @@
 {% load widget_tweaks %}
 {% block content %}
 {% include "core/modal.html" %}
+<style>
+    ul {
+        list-style: none;
+    }
+</style>
 <div class="container">
     <h2 class="bd-title py-md-3">Create a query</h2>
     <p>Select an object, any additional objects you'd like to include, and the attributes (i.e. columns) that you want in the results.</p>
@@ -37,7 +42,7 @@
         <div class="form-group {% if form.filters.errors %} invalid{% endif %}">
             <label>Filters</label>
             <div id="filters_list">
-                <!-- Javascript in queries-create.js will fill in this list -->
+                <!-- Javascript in create/filters.js will fill in this list -->
             </div>
             {% for error in form.filters.errors %}
             <p class="help-block">{{ error }}</p>
@@ -46,245 +51,9 @@
         <hr>
         <button type="submit" class="save btn btn-primary btn-lg" id="get_results_btn">Get Results</button>
     </form>
+</div>
+{% endblock content %}
+
+{% block extrascripts %}
     <script type="module" src="{% static 'js/create/main.js' %}"></script>
-    <script type='text/javascript'>
-    // {#
-    // // initialize variables
-    // const objectsEndpoint = "{% url 'params:objects' %}";
-
-    // const primaryObjectElem = document.getElementById('id_primary_object');
-    // const includesElem = document.getElementById('id_includes');
-    // const attributesElem = document.getElementById('id_attributes');
-    // handleChangePrimaryObject('');
-
-    // // event triggers
-    // primaryObjectElem.onchange = (event) => { handleChangePrimaryObject(event.target.value) };
-
-    // function handleChangePrimaryObject(pk) {
-    //     uncheckAll(includesElem);
-    //     uncheckAll(attributesElem);
-    //     hideAllChildren(includesElem);
-    //     hideAllChildren(attributesElem);
-    //     if (pk) {
-    //         fetch(objectsEndpoint + pk)
-    //             .then(response => response.json())
-    //             .then(objectData => {
-    //                 console.log('objdata', objectData);
-    //                 const includesToShow = objectData['includes'].map(item => item['id']).map(String);
-    //                 const attributesToShow = objectData['attributes'].map(item => item['id']).map(String);
-    //                 const showId = objectData['can_specify_id'];
-    //                 showInputChildren(includesElem, includesToShow);
-    //                 showInputChildren(attributesElem, attributesToShow);
-    //                 checkAllVisible(attributesElem);
-    //             });
-    //     }
-    // }
-
-    // function uncheckAll(parentElem) {
-    //     parentElem.querySelectorAll('input[type="checkbox"]').forEach(e => { e.checked = false });
-    // }
-
-    // function checkAllVisible(parentElem) {
-    //     let visibleChildren = Array.from(parentElem.children).filter(e => !e.hidden);
-    //     visibleChildren.map(e => e.querySelector('input[type=checkbox]')).forEach(checkboxElem => {
-    //         checkboxElem.checked = true;
-    //     })
-    // }
-
-    // function hideAllChildren(parentElem) {
-    //     Array.from(parentElem.children).forEach(childElem => {
-    //         childElem.hidden = true;
-    //     });
-    // }
-
-    // function showInputChildren(parentElem, valuesToShow) {
-    //     Array.from(parentElem.children)
-    //     .filter(elem => valuesToShow.includes(elem.querySelector('input').value))
-    //     .forEach(elem => elem.hidden = false);
-    // }
-
-    // function onChangeIncludes(event) {
-    //     let pk = event.target.value;
-    //     let associatedObjectPk = includesData[pk]['associatedObject'];
-    //     if (!associatedObjectPk) {
-    //         // pass
-    //     } else if (event.target.checked) {
-    //         addToIncludedObjectPks(associatedObjectPk);
-    //         updateAttributes();
-    //     } else {
-    //         removeFromIncludedObjectPks(associatedObjectPk);
-    //         updateAttributes();
-    //     };
-    // }
-    // #}
-
-    //{#
-    // function updateIncludes() {
-    //     let valuesToShow = objectIncludes(primaryObjectPk);
-    //     uncheckAll(includesElem);
-    //     Array.from(includesElem.children).forEach(
-    //         childElem => {
-    //             let value = childElem.querySelector('input').value;
-    //             childElem.hidden = (valuesToShow.includes(value)) ? false : true;
-    //         }
-    //     );
-    // }
-
-
-    // function updateAttributes() {
-    //     let valuesSet = new Set();
-    //     let allObjectPks = [primaryObjectPk].concat(includedObjectPks).map(Number);
-    //     allObjectPks.forEach(pk => {
-    //         objectAttributes(pk).forEach(item => valuesSet.add(item));
-    //     });
-    //     let valuesToShow = Array.from(valuesSet);
-    //     uncheckAll(attributesElem);
-    //     Array.from(attributesElem.children).forEach(
-    //         childElem => {
-    //             let value = childElem.querySelector('input').value;
-    //             childElem.hidden = (valuesToShow.includes(value)) ? false : true;
-    //         }
-    //     );
-    //     checkAllVisible(attributesElem);
-    // }
-
-    // // onchange functions
-    // function onChangePrimaryObject(event) {
-    //     primaryObjectPk = event.target.value;
-    //     includedObjectPks = [];
-    //     updateIncludes();
-    //     updateAttributes();
-    //     updateFilters();
-    // }
-
-    // // set up dictionaries 
-    // // get objects data
-    // // let objectsEndpoint = "{% url 'params:objects' %}";
-    // //
-    // // let objectsData = {{ objects_data|safe }};
-    // let includesData = { { includes_data | safe } };
-    // let filtersData = { { filters_data | safe } };
-    // let primaryObjectPk = null;
-    // let includedObjectPks = [];
-    // let filters = [];
-    // let primaryObjectElem = document.getElementById('id_primary_object');
-    // let includesElem = document.getElementById('id_includes');
-    // let attributesElem = document.getElementById('id_attributes');
-    // let filtersTableElem = document.getElementById('id_filters_table');
-    // // set event triggers
-    // primaryObjectElem.onchange = onChangePrimaryObject;
-    // includesElem.onchange = onChangeIncludes;
-    // // set initial values
-    // updateIncludes();
-    // updateAttributes();
-    // updateFilters();
-    // // helper functions
-    // function removeItemFromArray(item, array) {
-    //     if (array.includes(item)) {
-    //         array.splice(array.indexOf(item), 1);
-    //     };
-    // }
-
-    // function objectIncludes(objectPk) {
-    //     return (objectPk) ? objectsData[objectPk]['includes'].map(String) : [];
-    // }
-
-    // function objectAttributes(objectPk) {
-    //     return (objectPk) ? objectsData[objectPk]['attributes'].map(String) : [];
-    // }
-
-
-
-
-    // function onChangeIncludes(event) {
-    //     let pk = event.target.value;
-    //     let associatedObjectPk = includesData[pk]['associatedObject'];
-    //     if (!associatedObjectPk) {
-    //         // pass
-    //     } else if (event.target.checked) {
-    //         addToIncludedObjectPks(associatedObjectPk);
-    //         updateAttributes();
-    //     } else {
-    //         removeFromIncludedObjectPks(associatedObjectPk);
-    //         updateAttributes();
-    //     };
-    // }
-
-    // function addToIncludedObjectPks(pk) {
-    //     if (primaryObjectPk === pk || includedObjectPks.includes(pk)) {
-    //         // pass
-    //     } else {
-    //         includedObjectPks.push(pk);
-    //     };
-    // }
-
-    // function removeFromIncludedObjectPks(pk) {
-    //     removeItemFromArray(pk, includedObjectPks);
-    // }
-
-    // function updateIncludes() {
-    //     let valuesToShow = objectIncludes(primaryObjectPk);
-    //     uncheckAll(includesElem);
-    //     Array.from(includesElem.children).forEach(
-    //         childElem => {
-    //             let value = childElem.querySelector('input').value;
-    //             childElem.hidden = (valuesToShow.includes(value)) ? false : true;
-    //         }
-    //     );
-    // }
-
-    // function updateAttributes() {
-    //     let valuesSet = new Set();
-    //     let allObjectPks = [primaryObjectPk].concat(includedObjectPks).map(Number);
-    //     allObjectPks.forEach(pk => {
-    //         objectAttributes(pk).forEach(item => valuesSet.add(item));
-    //     });
-    //     let valuesToShow = Array.from(valuesSet);
-    //     uncheckAll(attributesElem);
-    //     Array.from(attributesElem.children).forEach(
-    //         childElem => {
-    //             let value = childElem.querySelector('input').value;
-    //             childElem.hidden = (valuesToShow.includes(value)) ? false : true;
-    //         }
-    //     );
-    //     checkAllVisible(attributesElem);
-    // }
-
-    // function updateFilters() {
-    //     filtersTableElem.parentNode.hidden = true;
-    //     filtersTableElem.querySelectorAll('*').forEach(node => node.remove());
-    //     if (true) {
-    //         // do nothing
-    //     } else if (!primaryObjectPk) {
-    //         filtersTableElem.hidden = true;
-    //         filters = [];
-    //     } else {
-    //         filtersTableElem.hidden = false;
-    //         let thead = document.createElement('thead');
-    //         let tbody = document.createElement('tbody');
-    //         filtersTableElem.append(thead);
-    //         filtersTableElem.append(tbody);
-    //         // header row
-    //         let tr = document.createElement('tr');
-    //         thead.append(tr);
-    //         ['cat', 'bat', 'dog'].forEach(n => {
-    //             let th = document.createElement('th');
-    //             th.scope = 'col';
-    //             th.textContent = n;
-    //             tr.append(th);
-    //         });
-    //         // let's do two rows cuz why not
-    //         [1, 2, 3].forEach(x => {
-    //             let tr = document.createElement('tr');
-    //             tbody.append(tr);
-    //             [1, 2, 3].forEach(v => {
-    //                 td = document.createElement('td');
-    //                 td.textContent = v;
-    //                 tr.append(td);
-    //             });
-    //         });
-    //     }
-    // }
-    // #}
-    </script>
-    {% endblock %}
+{% endblock extrascripts %}

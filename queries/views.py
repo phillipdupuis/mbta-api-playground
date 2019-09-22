@@ -3,14 +3,13 @@ from django.http import HttpResponse, JsonResponse
 from django.urls import reverse, reverse_lazy
 from django.views import generic
 from django.db import transaction
-from django.conf import settings
 from .forms import QueryForm
 from .models import Query, QueryFilter
 from params.models import MbtaFilter
 import json
-from bokeh.plotting import figure, output_file, show
+from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource
-from bokeh.embed import components, json_item
+from bokeh.embed import json_item
 from bokeh.tile_providers import get_provider, Vendors
 from pyproj import Proj, transform
 import pandas as pd
@@ -57,82 +56,39 @@ def results_create_graph(request, pk, div, plot_type, x=None, y=None):
     query = get_object_or_404(Query, pk=pk)
     results = query.get_results(request)
 
-    if plot_type == 'bar':
+    if plot_type == 'BAR':
         value_counts = results.df[x].value_counts()
         values = value_counts.index.values.tolist()
         counts = value_counts.values.tolist()
-        plot = figure(x_range=[str(x) for x in values], plot_height=400, title=f'{x} counts')
+        plot = figure(x_range=[str(v) for v in values], plot_height=400, title=f'{x} counts')
         plot.vbar(x=values, top=counts, width=0.9)
         plot.y_range.start = 0
 
-    elif plot_type == 'geo':
-        proj_from = Proj(init='epsg:4326')
-        proj_to = Proj(init='epsg:3857')
+    elif plot_type.endswith('LOCATIONS'):
 
-        def lat_lon_to_web_mercator(df_row):
-            x, y = transform(proj_from, proj_to, df_row.longitude, df_row.latitude)
+        latlon_proj = Proj(init='epsg:4326')
+        webmercator_proj = Proj(init='epsg:3857')
+        col_prefix = plot_type[:-len('LOCATIONS')]
+        lat_column = f'{col_prefix}latitude'
+        lon_column = f'{col_prefix}longitude'
+
+        def transform_coordinates(data):
+            x, y = transform(latlon_proj, webmercator_proj, data[lon_column], data[lat_column])
             return pd.Series({'x': x, 'y': y})
 
-        web_mercator = results.df.apply(lat_lon_to_web_mercator, axis=1)
+        coords = results.df.apply(transform_coordinates, axis=1)
 
-        # lat_lon = results.df[['latitude', 'longitude']].to_numpy()
-        # mercator_stuff = [from_latlon(lat, lon)[:2] for (lat, lon) in lat_lon]
-        # lat = [x[0] for x in mercator_stuff]
-        # lon = [x[1] for x in mercator_stuff]
+        title = f'{query.primary_object.name} Locations' if not col_prefix else f'{col_prefix.rstrip("_")} Locations'
         plot = figure(
-            x_range=(web_mercator.x.min(), web_mercator.x.max()),
-            y_range=(web_mercator.y.min(), web_mercator.y.max()),
+            x_range=(coords.x.min(), coords.x.max()),
+            y_range=(coords.y.min(), coords.y.max()),
             x_axis_type='mercator',
             y_axis_type='mercator',
+            title=title,
         )
-        tile = get_provider(Vendors.CARTODBPOSITRON)
-        plot.add_tile(tile)
-        source = ColumnDataSource(data=dict(x=web_mercator.x.tolist(), y=web_mercator.y.tolist()))
+        plot.add_tile(get_provider(Vendors.CARTODBPOSITRON_RETINA))
+        source = ColumnDataSource(data=dict(x=coords.x.tolist(), y=coords.y.tolist()))
         plot.circle(x='x', y='y', size=8, fill_color='blue', fill_alpha=0.8, source=source)
 
     data = json_item(plot, div)
     return JsonResponse(data)
-
-
-# def results_create_graph_geo(request, pk, div):
-#     query = get_object_or_404(Query, pk=pk)
-#     results = query.get_results(request)
-#     map_options = GMapOptions(
-#         lat=results.df['latitude'].median(),
-#         lng=results.df['longitude'].median(),
-#         map_type='roadmap',
-#         zoom=11,
-#     )
-#     plot = gmap(settings.GOOGLE_MAPS_API_KEY, map_options, title="Phil's title")
-#     source = ColumnDataSource(
-#         data=dict(lat=results.df['latitude'].values.tolist(),
-#                     lon=results.df['longitude'].values.tolist())
-#     )
-#     plot.circle(x='lon', y='lat', size=8, fill_color='blue', fill_alpha=0.8, source=source)
-#     data = json_item(plot, div)
-#     return JsonResponse(data)
-
-
-
-# def build_graph_from_params(request, pk, plot_type, x, y):
-#     # x = [1, 2, 3, 4, 5]
-#     # y = [1, 2, 3]
-#     # plot = figure(title='blah', x_axis_label='x-ey', y_axis_label='whoknows', plot_width=400, plot_height=400)
-#     # plot.line(x, y, line_width=2)
-#     # data = json_item(plot, 'my_graph')
-#     # new 
-#     results = request.session[f'query_{pk}_results']
-#     df = results.df
-#     if plot_type == 'bar' and x == '---':
-#         df = df.groupby(y)
-
-#     data = pandas_highcharts.core.serialize(
-#         df,
-#         render_to='my_graph',
-#         output_type='json',
-#         kind=plot_type,
-#     )
-#     # import pdb; pdb.set_trace()
-#     # dataNEW = JsonResponse(data)
-#     # import pdb; pdb.set_trace()
-#     return HttpResponse(data)

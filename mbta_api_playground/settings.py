@@ -23,13 +23,13 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '7we%y$n&$x90)@xx36(w45!puowx1et78*i0q22@!qt=qo-wy2'
+SECRET_KEY = os.getenv('SECRET_KEY')
 MBTA_API_KEY = os.getenv('MBTA_API_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.pythonanywhere.com']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.pythonanywhere.com', 'www.mbta-api-playground.com', 'mbta-api-playground.com']
 
 
 # Application definition

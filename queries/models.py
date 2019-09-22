@@ -11,7 +11,9 @@ from params.models import MbtaObject, MbtaInclude, MbtaAttribute, MbtaFilter
 
 class Query(models.Model):
     """
-    User-created.
+    Defines the parameters for a query to the MBTA API.
+    Allows the user to define a primary resource, included resources, attributes,
+    and filters.
     """
     primary_object = models.ForeignKey(
         MbtaObject,
@@ -50,9 +52,8 @@ class Query(models.Model):
     def get_results(self, request):
         """ Get results. Use the session cache to store them for quick access """
         key = f'query_{self.id}_results'
-        if key in request.session and False:
+        if key in request.session:
             results = request.session[key]
-            print('got it from cacheeee')
         else:
             results = Results(self.get_response())
             request.session[key] = results
@@ -60,6 +61,10 @@ class Query(models.Model):
 
 
 class QueryFilter(models.Model):
+    """
+    Represents a single filter attached to the query. Links the query with a filter
+    from the parameters and defines the filter value.
+    """
     query = models.ForeignKey(
         Query,
         on_delete=models.CASCADE,
@@ -79,6 +84,15 @@ class QueryFilter(models.Model):
 
 
 class Request(models.Model):
+    """
+    Created any time a user wants to get/view the results of a given query.
+    Handles building the request URL, headers, and parameters, as well as
+    sending the request to the MBTA API and receiving the response.
+
+    The user, datetime, and response status code are logged. This also handles
+    updating the 'url' field on the Query.
+    """
+
     query = models.ForeignKey(
         Query,
         on_delete=models.CASCADE,
@@ -126,19 +140,28 @@ class Request(models.Model):
 
 
 class Results:
+    """
+    This model is not stored in any database.
+    It handles converting a query response into useful data.
+    Any time a query is invoked, it will use the response from the
+    MBTA API to construct a Results object instance.
+
+    The properties and methods are used to construct displays or
+    screen components in web pages so that users can interact with
+    the results of their queries.
+    """
+
     def __init__(self, response: requests.Response):
         self.response = response
         if response.ok:
             self.df = create_DataFrame(response)
             reduce_DataFrame_memory_usage(self.df)
-            self.columns_shown = self.df.columns.tolist()
             self.error = None
             self.error_details = None
             self.response_size_bytes = len(response.content)
             self.plot_params = plot_params(self.df)
         else:
             self.df = None
-            self.columns_shown = None
             self.error = f'{response.status_code} {response.reason}'
             self.error_details = get_error_details(response)
 
@@ -202,42 +225,47 @@ def create_DataFrame(response: requests.Response) -> pd.DataFrame:
 
 
 def clean_DataFrame(df: pd.DataFrame) -> pd.DataFrame:
-    """ Expand some columns, drop others, ... """
-    def get_data_id(x):
-        if isinstance(x, pd.Series):
-            return x.apply(get_data_id)
+    """ Drop useless columns, expand others that contain nested data """
+
+    def expand_columns(df, columns) -> pd.DataFrame:
+        """ Expands a column containing nested data into separate columns"""
+        columns = [c for c in columns if c in df.columns]
+        if any(columns):
+            new_dfs = [convert_column_to_dataframe(df, c) for c in columns]
+            return df.drop(columns=columns).join(new_dfs)
         else:
-            # if 'data' in x:
-            #     if 'id' in
-            try:
-                # Need to account for if DATA is a list. Huh.
-                return x['data']['id']
-            except (TypeError, KeyError):
-                return None
+            return df
 
-    # Drop the useless columns first
-    df = df.drop(columns=['links', 'type'])
+    def convert_column_to_dataframe(df, column) -> pd.DataFrame:
+        """ Converts a column of data into its own dataframe,
+            which will ultimately be joined to the main dataframe."""
+        if column == 'attributes':
+            return df['attributes'].apply(pd.Series)
 
-    if 'attributes' in df.columns:
-        attributes = df['attributes'].apply(pd.Series)
-        df = df.drop(columns=['attributes']).join(attributes)
+        elif column == 'relationships':
+            def get_data_id(x):
+                if isinstance(x, pd.Series):
+                    return x.apply(get_data_id)
+                else:
+                    try:
+                        return x['data']['id']
+                    except (TypeError, KeyError):
+                        return None
+            return df['relationships'].apply(pd.Series).apply(get_data_id)
 
-    if 'relationships' in df.columns:
-        relationships = df['relationships'].apply(pd.Series).apply(get_data_id)
-        df = df.drop(columns=['relationships']).join(relationships)
+        elif column == 'properties':
+            def props_list_to_dict(props_list):
+                return {prop['name']: prop['value'] for prop in props_list}
+            return df['properties'].map(props_list_to_dict).apply(pd.Series)
 
-    if 'properties' in df.columns:
-        def transform_props_list_to_dict(props_list):
-            return {prop['name']: prop['value'] for prop in props_list}
-        properties = df['properties'].map(
-            transform_props_list_to_dict).apply(pd.Series)
-        df = df.drop(columns=['properties']).join(properties)
-
-    # if 'informed_entity' in df.columns:
-    #     informed_entity = df['informed_entity'].apply(pd.Series).stack().reset_index(level=1, drop=True).apply(pd.Series)
-    #     df = df.drop(columns=['informed_entity']).join(informed_entity, how='outer').reset_index(drop=True)
-
+    df = df.drop(columns=[c for c in ('links', 'type') if c in df.columns])
+    df = expand_columns(df, columns=['attributes', 'relationships'])
+    df = expand_columns(df, columns=['properties'])
     return df
+
+    # # if 'informed_entity' in df.columns:
+    # #     informed_entity = df['informed_entity'].apply(pd.Series).stack().reset_index(level=1, drop=True).apply(pd.Series)
+    # #     df = df.drop(columns=['informed_entity']).join(informed_entity, how='outer').reset_index(drop=True)
 
 
 def prefix_DataFrame_columns(df: pd.DataFrame, prefix: str) -> pd.DataFrame:
@@ -268,11 +296,27 @@ def get_error_details(response: requests.Response) -> str:
 
 
 def plot_params(df) -> dict:
+    types = OrderedDict()
+    x_options_per_type = dict()
+
+    def bar_criteria(column):
+        return (df[column].dtype.name == 'category') and (1 < df[column].nunique() < 16)
+
+    bar_options = [c for c in df.columns if bar_criteria(c)]
+
+    if any(bar_options):
+        types['BAR'] = 'Bar Graph'
+        x_options_per_type['BAR'] = bar_options
+
+    for lat_column in [c for c in df.columns if c.endswith('latitude')]:
+        prefix = lat_column[:-len('latitude')]
+        if f'{prefix}longitude' in df.columns:
+            type_int = 'LOCATIONS' if not prefix else f'{prefix}LOCATIONS'
+            type_ext = 'Locations' if not prefix else f'{prefix.rstrip("_")} Locations'
+            types[type_int] = type_ext
+            x_options_per_type[type_int] = []
+
     return {
-        'types': ['bar', 'idk', 'geo'],
-        'x_options_per_type': {
-            'bar': [col for col in df.columns if df[col].dtype.name == 'category'],
-            'idk': [],
-            'geo': [],
-        },
+        'types': types,
+        'x_options_per_type': x_options_per_type,
     }

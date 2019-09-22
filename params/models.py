@@ -11,6 +11,7 @@ class MbtaObject(models.Model):
     description = models.TextField()
     can_specify_id = models.BooleanField(default=False)
     requires_filters = models.BooleanField(default=False)
+    active = models.BooleanField(default=True)
 
     class Meta:
         ordering = ['name']
@@ -24,6 +25,7 @@ class MbtaInclude(models.Model):
     The additional objects or data that can be included
     in the results returned from the MBTA API.
     """
+    active = models.BooleanField(default=True)
     name = models.CharField(max_length=50, unique=True)
     associated_object = models.ForeignKey(
         MbtaObject,
@@ -45,6 +47,7 @@ class MbtaFilter(models.Model):
     """
     The types of filters that can be attached to queries.
     """
+    active = models.BooleanField(default=True)
     name = models.CharField(max_length=50)
     for_object = models.ForeignKey(
         MbtaObject,
@@ -59,6 +62,7 @@ class MbtaFilter(models.Model):
         null=True,
         blank=True,
     )
+    json_path = models.CharField(max_length=200, blank=True)
 
     def __str__(self):
         return f'[{self.for_object.name}] {self.name}'
@@ -69,6 +73,7 @@ class MbtaAttribute(models.Model):
     The attributes or fields that each MBTA 'object' possesses.
     In queries, the attributes that are returned can be limited.
     """
+    active = models.BooleanField(default=True)
     for_object = models.ForeignKey(
         MbtaObject,
         on_delete=models.CASCADE,
@@ -76,14 +81,15 @@ class MbtaAttribute(models.Model):
         related_query_name='attribute',
     )
     name = models.CharField(max_length=200)
-    description = models.TextField()
+    description = models.TextField(blank=True)
     required = models.BooleanField()
     data_type = models.CharField(max_length=50)
     default = models.CharField(max_length=100, blank=True)
     example = models.CharField(max_length=100, blank=True)
     minimum = models.PositiveSmallIntegerField(blank=True, null=True)
-    choices = models.CharField(max_length=200, blank=True)
+    choices = models.CharField(max_length=1000, blank=True)
     data_format = models.CharField(max_length=50, blank=True)
+    json_path = models.CharField(max_length=200, blank=True)
 
     def __str__(self):
         return f'[{self.for_object.name}] {self.name}'
