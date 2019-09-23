@@ -75,9 +75,11 @@ graphForm.onsubmit = async (event) => {
 function buildGraphUrl() {
     const base = graphFormElements.submitButton.dataset.endpoint;
     const divId = graphContainer.id;
+    const maxWidth = Math.round(window.innerWidth * 0.75);
+    const maxHeight = Math.round(window.innerHeight * 0.66);
     const type = graphFormElements.type.value;
-    // basic format for all is: <base>/<divGraphGoesIn>/<type>/
-    let url = urlJoin(base, divId, type);
+    // basic format for all is: <base>/<divGraphGoesIn>/<maxWidth>/<maxHeight>/<type>/
+    let url = urlJoin(base, divId, maxWidth, maxHeight, type);
     // add in additional parameters
     if (graphFormElements.x.value) {
         url = urlJoin(url, graphFormElements.x.value);
@@ -89,7 +91,7 @@ function buildGraphUrl() {
 function urlJoin(base, ...args) {
 
     const formatUrl = (url) => (url.endsWith('/')) ? url : `${url}/`;
-    const formatPathPiece = (p) => p.split('/').filter(x => x !== '').join('/');
+    const formatPathPiece = (p) => String(p).split('/').filter(x => x !== '').join('/');
 
     let url = formatUrl(base);
     args.forEach(item => {

@@ -1,6 +1,6 @@
 import * as checkboxes from './checkboxes.js';
-import * as data from './data.js';
 import * as filters from './filters.js';
+import * as params from './params.js';
 import elements from './elements.js';
 
 // event triggers 
@@ -15,11 +15,6 @@ elements.primaryObject.value = '';
 handleChangePrimaryObject('');
 
 
-function getId(obj) {
-	return String(obj.id);
-}
-
-
 async function handleChangePrimaryObject(pk) {
 
 	disableSubmit();
@@ -28,14 +23,10 @@ async function handleChangePrimaryObject(pk) {
 	filters.remove();
 
 	if (pk) {
-		const objIncludes = await data.objectIncludes(pk);
-		checkboxes.show(elements.includes, objIncludes.map(getId));
-
-		const objAttributes = await data.objectAttributes(pk);
-		checkboxes.showAndSelect(elements.attributes, objAttributes.map(getId));
-
-		const objFilters = await data.objectFilters(pk);
-		filters.add(objFilters);
+		const object = await params.objectProps(pk);
+		checkboxes.show(elements.includes, object.includes);
+		checkboxes.showAndSelect(elements.attributes, object.attributes);
+		filters.add(object.filters);
 	}
 
 	enableSubmit();
@@ -44,17 +35,17 @@ async function handleChangePrimaryObject(pk) {
 
 async function handleChangeIncludes(event) {
 
-	const id = event.target.value;
-	const primaryObjIncludes = await data.objectIncludes(elements.primaryObject.value);
-	const props = primaryObjIncludes.find(item => getId(item) === id);
+	// Check if the 'include' represents an object.
+	// If it does, show or hide that object's attributes.
 
-	if (props.associated_object) {
-		const incAttributes = await data.objectAttributes(props.associated_object);
-		const attributeIds = incAttributes.map(getId);
+	const include = params.includeProps(event.target.value);
+
+	if (include.associated_object) {
+		const object = await params.objectProps(include.associated_object);
 		if (event.target.checked) {
-			checkboxes.showAndSelect(elements.attributes, attributeIds);
+			checkboxes.showAndSelect(elements.attributes, object.attributes);
 		} else {
-			checkboxes.hide(elements.attributes, attributeIds);
+			checkboxes.hide(elements.attributes, object.attributes);
 		}
 	}
 }

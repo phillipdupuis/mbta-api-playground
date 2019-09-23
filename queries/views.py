@@ -20,6 +20,17 @@ class QueryCreate(generic.CreateView):
     template_name = 'queries/create.html'
     success_url = reverse_lazy('home')
 
+    def get_context_data(self, **kwargs):
+        """ Send out API endpoints for the parameters so javascript can make
+            asynchronous requests to refine what options are available """
+        context = super().get_context_data(**kwargs)
+        context['endpoints'] = {
+            'params': {
+                'objects': reverse('params:objects'),
+            }
+        }
+        return context
+
     def form_valid(self, form):
         with transaction.atomic():
             filters = json.loads(form.cleaned_data['filters'])
@@ -44,6 +55,10 @@ class QueryResults(generic.DetailView):
 
 
 def results_as_csv(request, pk):
+    """
+    For a given query, this will convert the pandas dataframe of results into
+    a CSV file and download it onto the user's device.
+    """
     query = get_object_or_404(Query, pk=pk)
     results = query.get_results(request)
     response = HttpResponse(content_type='text/csv')
@@ -52,15 +67,21 @@ def results_as_csv(request, pk):
     return response
 
 
-def results_create_graph(request, pk, div, plot_type, x=None, y=None):
+def results_create_graph(request, pk, div, max_width, max_height, plot_type, x=None, y=None):
+    """
+    Given a set of parameters, produces a bokeh plot.
+    Sends back JSON for an interactive plot element that will be embedded in the page.
+    """
     query = get_object_or_404(Query, pk=pk)
     results = query.get_results(request)
+    width = min(max_width, 600)
+    height = min(max_height, 600)
 
     if plot_type == 'BAR':
         value_counts = results.df[x].value_counts()
         values = value_counts.index.values.tolist()
         counts = value_counts.values.tolist()
-        plot = figure(x_range=[str(v) for v in values], plot_height=400, title=f'{x} counts')
+        plot = figure(x_range=[str(v) for v in values], title=f'{x} counts', plot_width=width, plot_height=height)
         plot.vbar(x=values, top=counts, width=0.9)
         plot.y_range.start = 0
 
@@ -85,6 +106,8 @@ def results_create_graph(request, pk, div, plot_type, x=None, y=None):
             x_axis_type='mercator',
             y_axis_type='mercator',
             title=title,
+            plot_width=width,
+            plot_height=height,
         )
         plot.add_tile(get_provider(Vendors.CARTODBPOSITRON_RETINA))
         source = ColumnDataSource(data=dict(x=coords.x.tolist(), y=coords.y.tolist()))

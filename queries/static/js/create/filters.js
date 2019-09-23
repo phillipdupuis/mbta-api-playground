@@ -1,26 +1,27 @@
 import * as data from './data.js';
+import * as params from './params.js';
 import elements from './elements.js';
 
 // Adding/editing/removing filters
-export function add(filters) {
-    filters
-        .sort(filter => filter.name)
+
+export function add(filterPkList) {
+    const sortFunction = (a, b) => (a.name === 'id') ? -1 : a.name.localeCompare(b.name);
+    filterPkList
+        .map(pk => params.filterProps(pk))
+        .sort(sortFunction)
         .forEach(filter => {
-            // label 
+
             const label = document.createElement('div');
             label.className = 'input-group-prepend w-25';
             label.innerHTML = `<span class="input-group-text text-truncate w-100">${filter.name}</span>`;
-            // input
+
             const input = document.createElement('input');
             input.className = 'form-control text-left text-truncate w-75';
             input.setAttribute('type', 'button');
             input.onclick = () => editFilter(input);
             input.dataset.id = filter.id;
             input.dataset.name = filter.name;
-            input.dataset.forObject = filter.for_object;
-            input.dataset.associatedObject = (filter.associated_object) ? filter.associated_object : '';
-            input.dataset.jsonPath = (filter.json_path) ? filter.json_path : '';
-            // put it all together
+
             const elem = document.createElement('div');
             elem.className = 'input-group mb-2';
             elem.append(label);
@@ -43,16 +44,21 @@ function removeAllChildElements(elem) {
 
 
 async function editFilter(filterInput) {
+
+    const filter = params.filterProps(filterInput.dataset.id);
+
     const modal = document.getElementById('modal');
-    // Set the title 
-    modal.querySelector('.modal-title').innerText = `Filters: ${filterInput.dataset.name}`;
-    // Set the body content
+    modal.querySelector('.modal-title').innerText = `Filters: ${filter.name}`;
+    modal.querySelector('#modal-save-btn').onclick = () => handleSaveFilter(filterInput);
+
     const body = modal.querySelector('.modal-body');
     removeAllChildElements(body);
+    body.scrollTop = 0;
+
+    const choices = await data.getFilterChoices(filter);
+    const selectedValues = JSON.parse(elements.filters.value)[filter.id] || [];
     const ul = document.createElement('ul');
     ul.style.listStyle = 'none';
-    const choices = await data.getFilterChoices(filterInput.dataset.forObject, filterInput.dataset.id);
-    const selectedValues = JSON.parse(elements.filters.value)[filterInput.dataset.id] || [];
     choices.forEach(([value, name]) => {
         const li = document.createElement('li');
         const checked = (selectedValues.includes(value)) ? 'checked' : '';
@@ -62,11 +68,8 @@ async function editFilter(filterInput) {
         ul.append(li);
     });
     body.append(ul);
-    // Set the save function
-    modal.querySelector('#modal-save-btn').onclick = () => handleSaveFilter(filterInput);
-    // Show the modal
+
     $('#modal').modal('show');
-    $('#modal').scrollTop(0);
 }
 
 

@@ -15,8 +15,7 @@
     <form action="" method="post">{% csrf_token %}
         <div class="form-group{% if form.primary_object.errors %} invalid{% endif %}">
             {{ form.primary_object.label_tag }}
-            {% url 'params:objects' as api_endpoint %}
-            {% render_field form.primary_object class+="form-control form-control-lg" data-endpoint=api_endpoint %}
+            {% render_field form.primary_object class+="form-control form-control-lg" %}
             {% for error in form.primary_object.errors %}
             <p class="help-block">{{ error }}</p>
             {% endfor %}
@@ -55,5 +54,6 @@
 {% endblock content %}
 
 {% block extrascripts %}
-    <script type="module" src="{% static 'js/create/main.js' %}"></script>
+{{ endpoints|json_script:"endpoints" }}
+<script type="module" src="{% static 'js/create/main.js' %}"></script>
 {% endblock extrascripts %}

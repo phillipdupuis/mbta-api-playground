@@ -1,62 +1,5 @@
+import * as params from './params.js';
 import elements from './elements.js';
-
-const endpoints = {
-    objects: elements.primaryObject.dataset.endpoint
-};
-
-const dataFromApi = {};
-
-
-export async function getObjectData(pk) {
-    const dataId = `object_${pk}`;
-    if (dataId in dataFromApi) {
-        return dataFromApi[dataId];
-    } else {
-        const response = await fetch(endpoints.objects + pk);
-        const json = await response.json();
-        dataFromApi[dataId] = json;
-        return json;
-    }
-}
-
-// Quick way to hide include options that aren't working
-const hiddenIncludes = {
-    Alert: ['stops', 'routes', 'trips', 'facilities'],
-    Line: ['routes'],
-    Route: ['route_patterns'],
-    Stop: ['facilities', 'route', 'parent_station', 'child_stops', 'recommended_transfers'],
-};
-
-export async function objectIncludes(pk) {
-    const object = await getObjectData(pk);
-    const hidden = hiddenIncludes[object.name] || [];
-    return object.includes.filter(x => !hidden.includes(x.name));
-}
-
-
-const hiddenAttributes = {};
-
-export async function objectAttributes(pk) {
-    const object = await getObjectData(pk);
-    const hidden = hiddenAttributes[object.name] || [];
-    return object.attributes.filter(x => !hidden.includes(x.name));
-}
-
-
-const hiddenFilters = {
-    Alert: ['banner', 'datetime'],
-    Route: ['date', 'stop', 'direction_id'],
-    RoutePattern: ['direction_id', 'stop'],
-    Stop: ['date', 'direction_id', 'latitude', 'longitude', 'radius', 'route', 'route_type'],
-    Vehicle: ['direction_id', 'route_type'],
-};
-
-export async function objectFilters(pk) {
-    const object = await getObjectData(pk);
-    const hidden = hiddenFilters[object.name] || [];
-    const sortFunction = (a, b) => (a.name === 'id') ? -1 : a.name.localeCompare(b.name);
-    return object.filters.filter(x => !hidden.includes(x.name)).sort(sortFunction);
-}
 
 
 const mbtaApiObjectPaths = {
@@ -81,10 +24,9 @@ const objectNameAttributes = {
 }
 
 
-export async function getFilterChoices(objectId, filterId) {
+export async function getFilterChoices(filter) {
 
-    const object = await getObjectData(objectId);
-    const filter = object.filters.find(x => x.id == filterId);
+    const object = await params.objectProps(filter.for_object);
 
     if ((object.name in mbtaApiObjectPaths) && (filter.json_path)) {
         const response = await fetch(mbtaApiObjectPaths[object.name]);
@@ -134,7 +76,7 @@ async function mapFilterValuesToNames(filter, values) {
 
     if (filter.associated_object) {
 
-        const object = await getObjectData(filter.associated_object);
+        const object = await params.objectProps(filter.associated_object);
         const nameAttribute = objectNameAttributes[object.name];
 
         if (nameAttribute && mbtaApiObjectPaths[object.name]) {
@@ -200,59 +142,3 @@ function extractValues(data, path, successFunction) {
         }
     }
 }
-
-
-// const objectValuePaths = {
-//     Alert: {
-//         activity: 'data/{index}/attributes/informed_entity/{index}/activities/{index}',
-//         route_type: 'data/{index}/attributes/informed_entity/{index}/route_type',
-//         direction_id: 'data/{index}/attributes/informed_entity/{index}/direction_id',
-//         route: 'data/{index}/attributes/informed_entity/{index}/route',
-//         stop: 'data/{index}/attributes/informed_entity/{index}/stop',
-//         trip: 'data/{index}/attributes/informed_entity/{index}/trip',
-//         facility: 'data/{index}/attributes/informed_entity/{index}/facility',
-//         id: 'data/{index}/id',
-//         banner: 'data/{index}/attributes/banner',
-//         lifecycle: 'data/{index}/attributes/lifecycle',
-//         severity: 'data/{index}/attributes/severity',
-//     },
-//     Facility: {
-//         stop: 'data/{index}/relationships/stop/data/id',
-//         type: 'data/{index}/attributes/type',
-//     },
-//     Line: {
-//         id: 'data/{index}/id',
-//     },
-//     Route: {
-//         stop: 'data/{index}/relationships/stop/data/id',
-//         type: 'data/{index}/attributes/type',
-//         direction_id: 'data/{index}/attributes/direction_names/{index}',
-//         date: '',
-//         id: 'data/{index}/id',
-//     },
-//     RoutePattern: {
-//         id: 'data/{index}/id',
-//         route: 'data/{index}/relationships/route/data/id',
-//         direction_id: 'data/{index}/attributes/direction_names/{index}',
-//         stop: 'data/{index}/relationships/stop/data/id',
-//     },
-//     Stop: {
-//         date: '',
-//         direction_id: 'data/{index}/attributes/direction_names/{index}',
-//         latitude: '',
-//         longitude: '',
-//         radius: '',
-//         id: 'data/{index}/id',
-//         route_type: '',
-//         route: '',
-//         location_type: 'data/{index}/attributes/location_type',
-//     },
-//     Vehicle: {
-//         id: 'data/{index}/id',
-//         trip: 'data/{index}/relationships/trip/data/id',
-//         label: 'data/{index}/attributes/label',
-//         route: 'data/{index}/relationships/route/data/id',
-//         direction_id: 'data/{index}/attributes/direction_id',
-//         route_type: '',
-//     },
-// }

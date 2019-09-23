@@ -2,6 +2,7 @@ function getCheckboxes(parentElem, values) {
     if (values === 'all') {
         return Array.from(parentElem.querySelectorAll('input[type="checkbox"]'));
     } else {
+        values = values.map(String);
         return Array.from(parentElem.querySelectorAll('input[type="checkbox"]'))
             .filter(checkbox => values.includes(checkbox.value));
     }
