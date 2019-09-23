@@ -2,30 +2,44 @@ const elements = {
     editColumnsButton: document.getElementById('edit_columns_button'),
     table: document.getElementById('full-table').querySelector('table'),
     modal: document.getElementById('modal'),
-};
+}
 
 
 elements.editColumnsButton.onclick = (event) => {
+
     elements.modal.querySelector('.modal-title').innerText = 'Edit Columns Displayed';
-    // Set the body content
-    const body = modal.querySelector('.modal-body');
+    elements.modal.querySelector('#modal-save-btn').onclick = () => handleSave();
+
+    const body = elements.modal.querySelector('.modal-body');
     while (body.firstChild) {
         body.removeChild(body.firstChild);
     }
+    body.scrollTop = 0;
+
     const ul = document.createElement('ul');
+    ul.style.listStyle = 'none';
     elements.table.querySelectorAll('th').forEach(col => {
+        
+        const input = document.createElement('input');
+        input.className = 'form-check-input';
+        input.setAttribute('type', 'checkbox');
+        input.id = col.id;
+        input.value = col.id;
+        input.checked = (col.hidden) ? false : true;
+
+        const label = document.createElement('label');
+        label.className = 'form-check-label';
+        label.htmlFor = input.id;
+        label.innerText = col.id;
+
         const li = document.createElement('li');
-        const inputHtml = `<input class="form-check-input" type="checkbox" id="${col.id}" value="${col.id}" ${(col.hidden) ? '' : 'checked'}>`;
-        const labelHtml = `<label class="form-check-label" for="${col.id}">${col.id}</label>`;
-        li.innerHTML = inputHtml + labelHtml;
+        li.append(input);
+        li.append(label);
         ul.append(li);
     });
     body.append(ul);
-    // Set the save function
-    modal.querySelector('#modal-save-btn').onclick = () => handleSave();
-    // Show the modal
+
     $('#modal').modal('show');
-    $('#modal').scrollTop(0);
 }
 
 
@@ -36,15 +50,6 @@ function handleSave() {
         .map(col => col.value);
     setColumnsDisplayed(columnsDisplayed);
     $('#modal').modal('hide');
-}
-
-
-function getColumnsDisplayed() {
-    return Array.from(
-        elements.table.querySelectorAll('th')
-        .filter(th => !(th.hidden))
-        .map(th => th.id)
-    );
 }
 
 

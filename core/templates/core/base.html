@@ -16,19 +16,22 @@
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarActionList" aria-controls="navbarActionList" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
-        <a class="navbar-brand" href="/">MBTA API Playground</a>
+        <a class="navbar-brand" href="{% url 'home' %}">MBTA API Playground</a>
         <div class="collapse navbar-collapse" id="navbarActionList">
             <ul class="navbar-nav mr-auto mt-2 mt-lg-0">
-                <li class="nav-item active">
-                    <a class="nav-link" href="#">Home<span class="sr-only">(current)</span></a>
+                {% with current_page=request.resolver_match.url_name %}
+                <li class="nav-item {% if current_page == 'about' %}active{% endif %}">
+                    <a class="nav-link" href="{% url 'about' %}">About
+                        <span class="sr-only">{% if current_page == 'about' %}(current){% endif %}</span>
+                    </a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#">About</a>
+                <li class="nav-item {% if current_page == 'create' %}active{% endif %}">
+                    <a class="nav-link" href="{% url 'queries:create' %}">Query
+                        <span class="sr-only">{% if current_page == 'create' %}(current){% endif %}</span>
+                    </a>
                 </li>
+                {% endwith %}
             </ul>
-            {% if request.resolver_match.url_name != 'create' %}
-                <a href="{% url 'queries:create' %}" class="btn btn-primary my-2 my-sm-0"role="button">Create query</a>
-            {% endif %}
         </div>
     </header>
     <div class="container-fluid">

@@ -1,98 +1,110 @@
 const plotParams = JSON.parse(document.getElementById('plot_params').textContent);
 
-const graphForm = document.getElementById('graph_form');
-const graphFormElements = {
+const elements = {
+    form: document.getElementById('graph_form'),
     type: document.getElementById('graph_type'),
     x: document.getElementById('graph_x'),
     submitButton: document.getElementById('create_graph_btn'),
-}
-const graphContainer = document.getElementById('graph_container');
-
-graphFormElements.type.onchange = (event) => {
-    resetX();
+    outputDiv: document.getElementById('graph_container'),
 }
 
-resetGraphForm();
+elements.type.onchange = (event) => handleChangeType(event);
+elements.x.onchange = (event) => handleChangeX(event);
+elements.form.onsubmit = (event) => handleSubmitForm(event);
+
+resetForm();
 
 
-function resetGraphForm() {
+function resetForm() {
     resetType();
-    graphFormElements.submitButton.disabled = false;
-    graphFormElements.submitButton.innerHTML = 'Create';
+    elements.submitButton.disabled = false;
+    elements.submitButton.innerHTML = 'Create';
 }
 
 
 function resetType() {
-    const elem = graphFormElements.type;
-    elem.value = '';
-    elem.required = true;
+    elements.type.value = '';
+    elements.type.required = true;
     resetX();
 }
 
 
 function resetX() {
-    const elem = graphFormElements.x;
-    while (elem.firstChild) {
-        elem.removeChild(elem.firstChild);
+    // remove any existing options
+    while (elements.x.firstChild) {
+        elements.x.removeChild(elements.x.firstChild);
     }
-    const type = graphFormElements.type.value;
-    if (type) {
-        const choices = plotParams.x_options_per_type[type];
-        choices.forEach(v => {
+    // add options which should be available
+    if (elements.type.value) {
+        const choices = plotParams.x_options_per_type[elements.type.value];
+        choices.forEach(choice => {
             const option = document.createElement('option');
-            option.value = v;
-            option.innerText = v;
-            elem.append(option);
+            option.value = choice;
+            option.innerText = choice;
+            elements.x.append(option);
         });
-        elem.required = (choices.length > 0) ? true : false;
     }
-    elem.value = '';
-    elem.disabled = (elem.children.length > 0) ? false : true;
+    // set the value, required, and disabled attributes
+    elements.x.value = '';
+    if (elements.x.children.length > 0) {
+        elements.x.required = true;
+        elements.x.disabled = false;
+    } else {
+        elements.x.required = false;
+        elements.x.disabled = true;
+    }
 }
 
 
-graphForm.onsubmit = async (event) => {
+function handleChangeType(event) {
+    resetX();
+}
+
+
+function handleChangeX(event) {
+    // pass 
+}
+
+
+async function handleSubmitForm(event) {
     event.preventDefault();
     // show loading indicator 
-    graphFormElements.submitButton.disabled = true;
-    graphFormElements.submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...';
+    elements.submitButton.disabled = true;
+    elements.submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...';
     // remove any existing graphs 
-    while (graphContainer.firstChild) {
-        graphContainer.removeChild(graphContainer.firstChild);
+    while (elements.outputDiv.firstChild) {
+        elements.outputDiv.removeChild(elements.outputDiv.firstChild);
     }
-    // assemble the url
-    const url = buildGraphUrl();
-    // fetch the data and embed the graph 
-    const response = await fetch(url);
+    // fetch the data and embed the graph
+    const response = await fetch(graphUrl());
     const json = await response.json();
     Bokeh.embed.embed_item(json);
     // reset button state
-    graphFormElements.submitButton.disabled = false;
-    graphFormElements.submitButton.innerHTML = 'Create';
+    elements.submitButton.disabled = false;
+    elements.submitButton.innerHTML = 'Create';
 }
 
 
-function buildGraphUrl() {
-    const base = graphFormElements.submitButton.dataset.endpoint;
-    const divId = graphContainer.id;
-    const maxWidth = Math.round(window.innerWidth * 0.75);
-    const maxHeight = Math.round(window.innerHeight * 0.66);
-    const type = graphFormElements.type.value;
-    // basic format for all is: <base>/<divGraphGoesIn>/<maxWidth>/<maxHeight>/<type>/
-    let url = urlJoin(base, divId, maxWidth, maxHeight, type);
-    // add in additional parameters
-    if (graphFormElements.x.value) {
-        url = urlJoin(url, graphFormElements.x.value);
+function graphUrl() {
+    // basic format for all URLs is: <base>/<divGraphGoesIn>/<maxWidth>/<maxHeight>/<type>/
+    let url = urlJoin(
+        elements.submitButton.dataset.endpoint,
+        elements.outputDiv.id,
+        Math.round(window.innerWidth * 0.75),
+        Math.round(window.innerHeight * 0.66),
+        elements.type.value
+        );
+    // add in additional parameters if they are defined
+    if (elements.x.value) {
+        url = urlJoin(url, elements.x.value);
     }
     return url;
 }
 
 
 function urlJoin(base, ...args) {
-
     const formatUrl = (url) => (url.endsWith('/')) ? url : `${url}/`;
     const formatPathPiece = (p) => String(p).split('/').filter(x => x !== '').join('/');
-
     let url = formatUrl(base);
     args.forEach(item => {
         url = formatUrl(url + formatPathPiece(item));
