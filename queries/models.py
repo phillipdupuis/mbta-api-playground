@@ -201,7 +201,7 @@ class Results:
 
     @property
     def pretty_json(self) -> str:
-        return json.dumps(self.response.json(), sort_keys=True, indent=4)
+        return json.dumps(self.response.json(), sort_keys=True, indent=2)
 
     @property
     def column_dtypes(self) -> dict:

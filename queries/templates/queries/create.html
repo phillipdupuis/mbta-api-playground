@@ -38,8 +38,9 @@
         </div>
         <hr>
         {{ form.filters }}
-        <div class="form-group {% if form.filters.errors %} invalid{% endif %}" id="filters_list">
-            <label>Filters</label>
+        <div class="form-group {% if form.filters.errors %} invalid{% endif %}">
+            <label for="filters_list">Filters</label>
+            <div class="form-group pl-3" id="filters_list"></div>
             {% for error in form.filters.errors %}
             <p class="help-block">{{ error }}</p>
             {% endfor %}
