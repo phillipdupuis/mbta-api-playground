@@ -40,9 +40,9 @@
         {{ form.filters }}
         <div class="form-group {% if form.filters.errors %} invalid{% endif %}">
             <label>Filters</label>
-            <div id="filters_list">
+            <ul id="filters_list">
                 <!-- Javascript in create/filters.js will fill in this list -->
-            </div>
+            </ul>
             {% for error in form.filters.errors %}
             <p class="help-block">{{ error }}</p>
             {% endfor %}

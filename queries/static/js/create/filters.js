@@ -11,19 +11,20 @@ export function add(filterPkList) {
         .sort(sortFunction)
         .forEach(filter => {
 
-            const label = document.createElement('div');
-            label.className = 'input-group-prepend w-25';
-            label.innerHTML = `<span class="input-group-text text-truncate w-100">${filter.name}</span>`;
+            const label = document.createElement('label');
+            label.className = 'col-sm-3 col-form-label text-truncate';
+            label.innerText = filter.name;
+            label.htmlFor = filter.id;
 
             const input = document.createElement('input');
-            input.className = 'form-control text-left text-truncate w-75';
+            input.className = 'col-sm-9 form-control text-left text-truncate';
             input.setAttribute('type', 'button');
             input.onclick = () => editFilter(input);
             input.dataset.id = filter.id;
             input.dataset.name = filter.name;
 
-            const elem = document.createElement('div');
-            elem.className = 'input-group mb-2';
+            const elem = document.createElement('li');
+            elem.className = 'form-group row';
             elem.append(label);
             elem.append(input);
             elements.filtersList.append(elem);

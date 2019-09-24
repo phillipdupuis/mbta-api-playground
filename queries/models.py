@@ -43,19 +43,20 @@ class Query(models.Model):
             objects.append(include.associated_object)
         return objects
 
-    def get_response(self) -> requests.Response:
-        response = Request(query=self).get()
+    def get_response(self, request) -> requests.Response:
+        user = request.user if request.user.is_authenticated else None
+        response = Request(query=self, user=user).get()
         self.url = response.url
         self.save()
         return response
 
-    def get_results(self, request):
+    def get_results(self, request, get_from_cache=False):
         """ Get results. Use the session cache to store them for quick access """
         key = f'query_{self.id}_results'
-        if key in request.session:
+        if get_from_cache and (key in request.session):
             results = request.session[key]
         else:
-            results = Results(self.get_response())
+            results = Results(self.get_response(request))
             request.session[key] = results
         return results
 
@@ -101,10 +102,16 @@ class Request(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
+        null=True,
+        default=None,
     )
     datetime = models.DateTimeField('date/time', default=timezone.now)
     response_status_code = models.PositiveSmallIntegerField(
         'status code', blank=True, null=True)
+    response_size_bytes = models.IntegerField('response size', blank=True, null=True)
+
+    class Meta:
+        ordering = ['-datetime']
 
     def __str__(self):
         return f'{self.query} -> {self.response_status_code}'
@@ -136,6 +143,8 @@ class Request(models.Model):
             self.url(), headers=self.headers(), params=self.params())
         self.datetime = timezone.now()
         self.response_status_code = response.status_code
+        self.response_size_bytes = len(response.content)
+        self.save()
         return response
 
 
@@ -154,12 +163,17 @@ class Results:
     def __init__(self, response: requests.Response):
         self.response = response
         if response.ok:
-            self.df = create_DataFrame(response)
-            reduce_DataFrame_memory_usage(self.df)
-            self.error = None
-            self.error_details = None
-            self.response_size_bytes = len(response.content)
-            self.plot_params = plot_params(self.df)
+            try:
+                self.df = create_DataFrame(response)
+                reduce_DataFrame_memory_usage(self.df)
+                self.error = None
+                self.error_details = None
+                self.response_size_bytes = len(response.content)
+                self.plot_params = plot_params(self.df)
+            except AssertionError as error:
+                self.df = None
+                self.error = error
+                self.error_detail = ''
         else:
             self.df = None
             self.error = f'{response.status_code} {response.reason}'
@@ -196,8 +210,9 @@ class Results:
 
 def create_DataFrame(response: requests.Response) -> pd.DataFrame:
     """ Creates a pandas DataFrame from the MBTA API response """
+    assert response.json()['data'], 'response contained no data'
     main_df = pd.DataFrame(response.json()['data'])
-    assert main_df['type'].nunique() == 1
+    assert main_df['type'].nunique() == 1, 'more than one type'
     main_type = main_df['type'].unique()[0]
     main_df = clean_DataFrame(main_df)
 

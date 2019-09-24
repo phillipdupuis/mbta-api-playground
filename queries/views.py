@@ -3,8 +3,9 @@ from django.http import HttpResponse, JsonResponse
 from django.urls import reverse, reverse_lazy
 from django.views import generic
 from django.db import transaction
+from django.db.models import Max as db_models_Max
 from .forms import QueryForm
-from .models import Query, QueryFilter
+from .models import Query, QueryFilter, Request
 from params.models import MbtaFilter
 import json
 from bokeh.plotting import figure
@@ -37,14 +38,26 @@ class QueryCreate(generic.CreateView):
             self.object = form.save()
             for id_, values in filters.items():
                 a = MbtaFilter.objects.get(pk=id_)
-                QueryFilter.objects.create(query=self.object, on_attribute=a, values=','.join(values))
+                QueryFilter.objects.create(
+                    query=self.object, on_attribute=a, values=','.join(values))
         return super(QueryCreate, self).form_valid(form)
 
     def get_success_url(self):
         return reverse('queries:results', kwargs={'pk': self.object.pk})
 
 
+class RequestList(generic.ListView):
+    """ Simple enough, shows recent requests (i.e. query invocations) in
+        descending order by datetime. Groups of 5 per page."""
+    model = Request
+    ordering = ['-datetime']
+    template_name = 'queries/request_list.html'
+    paginate_by = 5
+
+
 class QueryResults(generic.DetailView):
+    """ The 'Results' model (which is memory-only) actually drives the majority
+        of what is seen in this view. It gets set up as part of get_context_data."""
     model = Query
     template_name = 'queries/results.html'
 
@@ -60,7 +73,7 @@ def results_as_csv(request, pk):
     a CSV file and download it onto the user's device.
     """
     query = get_object_or_404(Query, pk=pk)
-    results = query.get_results(request)
+    results = query.get_results(request, get_from_cache=True)
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = f'attachment; filename="mbta_api_query_{query.pk}.csv"'
     results.df.to_csv(path_or_buf=response, index=False)
@@ -73,7 +86,7 @@ def results_create_graph(request, pk, div, max_width, max_height, plot_type, x=N
     Sends back JSON for an interactive plot element that will be embedded in the page.
     """
     query = get_object_or_404(Query, pk=pk)
-    results = query.get_results(request)
+    results = query.get_results(request, get_from_cache=True)
     width = min(max_width, 600)
     height = min(max_height, 600)
 
@@ -94,7 +107,8 @@ def results_create_graph(request, pk, div, max_width, max_height, plot_type, x=N
         lon_column = f'{col_prefix}longitude'
 
         def transform_coordinates(data):
-            x, y = transform(latlon_proj, webmercator_proj, data[lon_column], data[lat_column])
+            x, y = transform(latlon_proj, webmercator_proj,
+                             data[lon_column], data[lat_column])
             return pd.Series({'x': x, 'y': y})
 
         coords = results.df.apply(transform_coordinates, axis=1)
@@ -110,8 +124,10 @@ def results_create_graph(request, pk, div, max_width, max_height, plot_type, x=N
             plot_height=height,
         )
         plot.add_tile(get_provider(Vendors.CARTODBPOSITRON_RETINA))
-        source = ColumnDataSource(data=dict(x=coords.x.tolist(), y=coords.y.tolist()))
-        plot.circle(x='x', y='y', size=8, fill_color='blue', fill_alpha=0.8, source=source)
+        source = ColumnDataSource(
+            data=dict(x=coords.x.tolist(), y=coords.y.tolist()))
+        plot.circle(x='x', y='y', size=8, fill_color='blue',
+                    fill_alpha=0.8, source=source)
 
     data = json_item(plot, div)
     return JsonResponse(data)

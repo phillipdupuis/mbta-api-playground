@@ -3,35 +3,9 @@
 {% load widget_tweaks %}
 {% block content %}
 {% include "core/modal.html" %}
-<div class="modal fade" id="editColumnsModal" tabindex="-1" role="dialog" aria-labelledby="editColumnsModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="editColumnsModalLabel">Columns displayed</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <ul id="columns_displayed">
-                    {% for column in results.df.columns %}
-                    <li>
-                        <input class="form-check-input" type="checkbox" id="{{ column }}" value="{{ column }}">
-                        <label class="form-check-label" for="{{ column }}">{{ column }}</label>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="editColumnsModalSaveButton" data-dismiss="modal">Save changes</button>
-            </div>
-        </div>
-    </div>
-</div>
 {% if results.error %}
-<p>{{ results.error }}</p>
-<p>{{ results.error_detail }}</p>
+    <p>Error: {{ results.error }}</p>
+    <p>{{ results.error_detail }}</p>
 {% elif results.data_frame.empty %}
 <p>No data</p>
 {% else %}
@@ -46,9 +20,11 @@
     <li class="nav-item">
         <a class="nav-link" data-toggle="tab" href="#raw-data" id="id_tab_raw_data" role="tab" aria-controls="raw-data" aria-selected="false">JSON</a>
     </li>
-    <li class="nav-item">
-        <a class="nav-link" data-toggle="tab" href="#graphs" id="id_tab_graphs" role="tab" aria-controls="graphs" aria-selected="false">Plots</a>
-    </li>
+    {% if not results.plot_params.types|length_is:"0" %}
+        <li class="nav-item">
+            <a class="nav-link" data-toggle="tab" href="#graphs" id="id_tab_graphs" role="tab" aria-controls="graphs" aria-selected="false">Plots</a>
+        </li>
+    {% endif %}
 </ul>
 <!-- tab panes -->
 <div class="tab-content my-3">
@@ -61,12 +37,24 @@
             <dd class="col-sm-9">{{ results.response_size_bytes|filesizeformat }}</dd>
             <dt class="col-sm-3">Primary Object</dt>
             <dd class="col-sm-9">{{ query.primary_object }}</dd>
-            {% if query.includes.all.count > 0 %}
             <dt class="col-sm-3">Includes</dt>
-            <dd class="col-sm-9">{{ query.includes.all|join:", " }}</dd>
-            {% endif %}
+            <dd class="col-sm-9">
+                {% if query.includes.all.count > 0 %}
+                    {{ query.includes.all|join:", " }}
+                {% else %}
+                    None
+                {% endif %}
+            </dd>
             <dt class="col-sm-3">Attributes</dt>
             <dd class="col-sm-9">{{ query.attributes.all|join:", " }}</dd>
+            <dt class="col-sm-3">Filters</dt>
+            <dd class="col-sm-9">
+                {% if query.filters.all.count > 0 %}
+                    {{ query.filters.all|join:", " }}
+                {% else %}
+                    None
+                {% endif %}
+            </dd>
         </dl>
     </div>
     <!-- full table -->
@@ -141,9 +129,11 @@
 {% endif %}
 {% endblock content %}
 {% block extrascripts %}
-<script type="text/javascript" src="https://cdn.pydata.org/bokeh/release/bokeh-1.3.4.min.js"></script>
-<script type="text/javascript" src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.3.4.min.js"></script>
-{{ results.plot_params|json_script:"plot_params" }}
-<script type="module" src="{% static 'js/results/graphs.js' %}"></script>
-<script type="module" src="{% static 'js/results/table.js' %}"></script>
+{% if not results.error %}
+    <script type="text/javascript" src="https://cdn.pydata.org/bokeh/release/bokeh-1.3.4.min.js"></script>
+    <script type="text/javascript" src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.3.4.min.js"></script>
+    {{ results.plot_params|json_script:"plot_params" }}
+    <script type="module" src="{% static 'js/results/graphs.js' %}"></script>
+    <script type="module" src="{% static 'js/results/table.js' %}"></script>
+{% endif %}
 {% endblock extrascripts %}

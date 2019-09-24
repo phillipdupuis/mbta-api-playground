@@ -1,0 +1,72 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+{% load pagination_extras %}
+{% block content %}
+<div class="container">
+	<h2 class="bd-title py-md-3">Recent requests (page {{ page_obj.number }} of {{ paginator.num_pages }})</h2>
+	<ul class="list-group list-group-flush">
+    	{% for request in object_list %}
+    		{% with query=request.query %}
+    		<li class="list-group-item">
+    			<dl class="row">
+    				<dt class="col-sm-3">Date/time</dt>
+    				<dd class="col-sm-9">{{ request.datetime }}</dd>
+    				<dt class="col-sm-3">Response status code</dt>
+    				<dd class="col-sm-9">{{ request.response_status_code }}</dd>
+    				<dt class="col-sm-3">Response size</dt>
+    				<dd class="col-sm-9">{{ request.response_size_bytes|filesizeformat }}</dd>
+    				<dt class="col-sm-3">URL</dt>
+    				<dd class="col-sm-9">{{ query.url|urlizetrunc:100 }}</dd>
+            		<dt class="col-sm-3">Primary Object</dt>
+            		<dd class="col-sm-9">{{ query.primary_object }}</dd>
+            	</dl>
+            	<a class="btn btn-secondary btn-sm btn-block" href="{% url 'queries:results' query.pk %}" role="button" id="view_results_{{ query.pk }}">View results</a>
+    		</li>
+    		{% endwith %}
+    	{% empty %}
+    		<li>No queries yet.</li>
+    	{% endfor %}
+    </ul>
+	<nav aria-label="...">
+  		<ul class="pagination pagination-lg">
+  			{% if page_obj.has_previous %}
+  				<li class="page-item"><a class="page-link" href="?page=1" aria-label="First"><span aria-hidden="true">&laquo;</span></a></li>
+  				<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">&lsaquo;</a></li>
+  			{% else %}
+  				<li class="page-item disabled"><span class="page-link" aria-label="First"><span aria-hidden="true">&laquo;</span></span></li>
+  				<li class="page-item disabled"><span class="page-link" aria-label="Previous"><span aria-hidden="true">&lsaquo;</span></span></li>
+  			{% endif %}
+  			{% visible_page_nums paginator page_obj as page_nums %}
+  			{% for i in page_nums %}
+  				{% if page_obj.number == i %}
+  					<li class="page-item active" aria-current="page">
+  						<span class="page-link">{{ i }}<span class="sr-only">(current)</span></span>
+  					</li>
+  				{% else %}
+  					<li class="page-item">
+  						<a class="page-link" href="?page={{ i }}">{{ i }}</a>
+  					</li>
+  				{% endif %}
+  			{% endfor %}
+  			{% if page_obj.has_next %}
+  				<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next"><span aria-hidden="true">&rsaquo;</span></a></li>
+  				<li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Last"><span aria-hidden="true">&raquo;</span></a></li>
+  			{% else %}
+  				<li class="page-item disabled"><span class="page-link" aria-label="Next"><span aria-hidden="true">&rsaquo;</span></span></li>
+  				<li class="page-item disabled"><span class="page-link" aria-label="Last"><span aria-hidden="true">&raquo;</span></span></li>
+  			{% endif %}
+  		</ul>
+	</nav>
+</div>
+{% endblock content %}
+{% block extrascripts %}
+<script type="text/javascript">
+	const viewResultLinks = Array.from(document.querySelectorAll('a[id^="view_results"]'));
+	viewResultLinks.forEach(elem => {
+		elem.onclick = (event) => {
+			viewResultLinks.forEach(a => a.className += ' disabled');
+		}
+	});
+</script>
+{% endblock extrascripts %}
