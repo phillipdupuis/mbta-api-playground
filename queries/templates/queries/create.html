@@ -15,7 +15,7 @@
     <form action="" method="post">{% csrf_token %}
         <div class="form-group{% if form.primary_object.errors %} invalid{% endif %}">
             {{ form.primary_object.label_tag }}
-            {% render_field form.primary_object class+="form-control form-control-lg" %}
+            {% render_field form.primary_object class+="form-control" %}
             {% for error in form.primary_object.errors %}
             <p class="help-block">{{ error }}</p>
             {% endfor %}

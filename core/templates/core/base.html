@@ -3,22 +3,32 @@
 
 <head>
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="Phillip Dupuis">
     <title>MBTA API Playground</title>
+    <link rel="canonical" href="https://www.mbta-api-playground.com/">
+
     {% block stylesheets %}
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     {% endblock stylesheets %}
+    <style>
+        body {
+            padding-top: 65px;
+        }
+    </style>
+    {% block extrastyles %}
+    {% endblock extrastyles %}
 </head>
 
 <body>
-    <header class="navbar navbar-expand navbar-dark bg-dark flex-column flex-md-row">
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+        <a class="navbar-brand" href="{% url 'home' %}">MBTA API Playground</a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarActionList" aria-controls="navbarActionList" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
-        <a class="navbar-brand" href="{% url 'home' %}">MBTA API Playground</a>
         <div class="collapse navbar-collapse" id="navbarActionList">
-            <ul class="navbar-nav mr-auto mt-2 mt-lg-0">
+            <ul class="navbar-nav mr-auto">
                 {% with current_page=request.resolver_match.url_name %}
                 <li class="nav-item {% if current_page == 'about' %}active{% endif %}">
                     <a class="nav-link" href="{% url 'about' %}">About
@@ -38,7 +48,7 @@
                 {% endwith %}
             </ul>
         </div>
-    </header>
+    </nav>
     <div class="container-fluid">
         {% block content %}
         {% endblock content %}

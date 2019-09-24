@@ -21,7 +21,7 @@
             		<dt class="col-sm-3">Primary Object</dt>
             		<dd class="col-sm-9">{{ query.primary_object }}</dd>
             	</dl>
-            	<a class="btn btn-secondary btn-sm btn-block" href="{% url 'queries:results' query.pk %}" role="button" id="view_results_{{ query.pk }}">View results</a>
+            	<a class="btn btn-secondary btn-sm" href="{% url 'queries:results' query.pk %}" role="button" id="view_results_{{ query.pk }}">View results</a>
     		</li>
     		{% endwith %}
     	{% empty %}
@@ -29,7 +29,7 @@
     	{% endfor %}
     </ul>
 	<nav aria-label="...">
-  		<ul class="pagination pagination-lg">
+  		<ul class="pagination justify-content-center py-3">
   			{% if page_obj.has_previous %}
   				<li class="page-item"><a class="page-link" href="?page=1" aria-label="First"><span aria-hidden="true">&laquo;</span></a></li>
   				<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">&lsaquo;</a></li>
