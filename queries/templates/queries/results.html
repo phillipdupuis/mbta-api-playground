@@ -70,10 +70,10 @@
         <div class="flex-grow-1">
             <div class="table-responsive" style="max-height:66vh;overflow-y:auto;">
                 <table class="table table-sm table-striped">
-                    <thead class="thead-light sticky-top">
-                        <tr class="sticky-top">
+                    <thead class="thead-light">
+                        <tr>
                             {% for col in results.df.columns %}
-                                <th scope="col" id="{{ col }}" class="sticky-top">{{ col }}</th>
+                                <th scope="col" id="{{ col }}" class="sticky-top p-2">{{ col }}</th>
                             {% endfor %}
                         </tr>
                     </thead>
