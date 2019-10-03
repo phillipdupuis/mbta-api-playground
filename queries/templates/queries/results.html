@@ -94,7 +94,10 @@
     </div>
     <!-- raw data -->
     <div class="tab-pane p-3" id="raw-data" role="tabpanel" aria-labelledby="id_tab_raw_data">
-        <pre>{{ results.pretty_json }}</pre>
+        <div class="iframe-container">
+            <iframe id="report_iframe" srcdoc="{{ results.profile_report }}" allowfullscreen></iframe>
+        </div>
+        {# <pre>{{ results.pretty_json }}</pre> #}
     </div>
     <!-- graphs -->
     <div class="tab-pane p-3" id="graphs" role="tabpanel" aria-labelledby="id_tab_graphs">

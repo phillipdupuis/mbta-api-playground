@@ -6,6 +6,9 @@ from collections import OrderedDict
 import json
 import requests
 import pandas as pd
+from pandas_profiling import ProfileReport
+import matplotlib
+matplotlib.use('Agg')
 from params.models import MbtaObject, MbtaInclude, MbtaAttribute, MbtaFilter
 
 
@@ -178,6 +181,10 @@ class Results:
             self.df = None
             self.error = f'{response.status_code} {response.reason}'
             self.error_details = get_error_details(response)
+
+    @property
+    def profile_report(self):
+        return ProfileReport(self.df).to_html()
 
     @property
     def data_frame(self) -> pd.DataFrame:
