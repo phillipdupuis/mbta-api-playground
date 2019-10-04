@@ -64,11 +64,6 @@ function enableSubmit() {
 function displayLoadingIndicator() {
     disableSubmit();
     elements.saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...';
-    
-    const modal = document.getElementById('modal');
-    modal.querySelector('.modal-title').hidden = true;
-    modal.querySelector('.modal-footer').hidden = true;
-    modal.querySelector('.modal-body').innerHTML = '<p>Loading...</p>';
-    $('#modal').modal({backdrop: 'static', keyboard: false});
-    $('#modal').modal('show');
+
+    $('#modal-loading-screen').modal('show');
 }

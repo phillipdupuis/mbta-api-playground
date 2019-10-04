@@ -6,9 +6,6 @@ from collections import OrderedDict
 import json
 import requests
 import pandas as pd
-from pandas_profiling import ProfileReport
-import matplotlib
-matplotlib.use('Agg')
 from params.models import MbtaObject, MbtaInclude, MbtaAttribute, MbtaFilter
 
 
@@ -183,10 +180,6 @@ class Results:
             self.error_details = get_error_details(response)
 
     @property
-    def profile_report(self):
-        return ProfileReport(self.df).to_html()
-
-    @property
     def data_frame(self) -> pd.DataFrame:
         return self.df
 
@@ -213,6 +206,9 @@ class Results:
     @property
     def column_dtypes(self) -> dict:
         return {col: self.df[col].dtype.name for col in self.df.columns}
+
+    def generate_report_html(self) -> str:
+        return df_profile_report_html(self.df)
 
 
 def create_DataFrame(response: requests.Response) -> pd.DataFrame:
@@ -342,3 +338,46 @@ def plot_params(df) -> dict:
         'types': types,
         'x_options_per_type': x_options_per_type,
     }
+
+
+def df_profile_report_html(df) -> str:
+    """ Given a dataframe, generate the html for a profile report.
+        This is pretty bug-prone, so we may want to get rid of it... """
+    import pandas_profiling
+    import matplotlib
+    matplotlib.use('Agg')
+
+    # drop/fill in NA values
+    df = df.dropna(axis='columns', how='all')
+
+    for column in [c for c in df.columns if df[c].isnull().values.any()]:
+        dtype = df[column].dtype.name
+
+        if dtype == 'category':
+            fill_value = '<missing>'
+            df[column].cat.add_categories([fill_value], inplace=True)
+        elif dtype == 'object':
+            fill_value = '<missing>'
+        elif dtype == 'float64':
+            fill_value = df[column].mean()
+        else:
+            raise Exception(f'Not sure what to use as fill_value for dtype {dtype}, column {column}')
+
+        df[column].fillna(fill_value, inplace=True)
+
+    # drop columns containing lists, since they make pandas-profiling unhappy
+    def column_contains_lists(column):
+        series = df[column]
+        if series[series.apply(lambda x: isinstance(x, list))].size > 0:
+            return True
+        else:
+            return False
+
+    df.drop(columns=[c for c in df.columns if column_contains_lists(c)], inplace=True)
+
+    return df.profile_report(
+        minify_html=True,
+        correlations={
+            'pearson': False,
+        }
+    ).to_html()

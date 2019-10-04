@@ -3,6 +3,7 @@
 {% load widget_tweaks %}
 {% block content %}
 {% include "core/modal.html" %}
+{% include "core/modal_loading_indicator.html" %}
 {% if results.error %}
     <p>Error: {{ results.error }}</p>
     <p>{{ results.error_detail }}</p>
@@ -16,6 +17,9 @@
     </li>
     <li class="nav-item">
         <a class="nav-link" data-toggle="tab" href="#full-table" id="id_tab_table" role="tab" aria-controls="full-table" aria-selected="false">Table</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-toggle="tab" href="#report" id="id_tab_report" role="tab" aria-controls="report" aria-selected="false">Report</a>
     </li>
     <li class="nav-item">
         <a class="nav-link" data-toggle="tab" href="#raw-data" id="id_tab_raw_data" role="tab" aria-controls="raw-data" aria-selected="false">JSON</a>
@@ -92,12 +96,13 @@
             </div>
         </div>
     </div>
+    <!-- report -->
+    <div class="tab-pane p-3" id="report" role="tabpanel" aria-labelledby="id_tab_report">
+        <div id="report-container" data-endpoint="{% url 'queries:results-report' pk=query.pk %}"><!-- javascript will embed iframe --></div>
+    </div>
     <!-- raw data -->
     <div class="tab-pane p-3" id="raw-data" role="tabpanel" aria-labelledby="id_tab_raw_data">
-        <div class="iframe-container">
-            <iframe id="report_iframe" srcdoc="{{ results.profile_report }}" allowfullscreen></iframe>
-        </div>
-        {# <pre>{{ results.pretty_json }}</pre> #}
+        <pre>{{ results.pretty_json }}</pre>
     </div>
     <!-- graphs -->
     <div class="tab-pane p-3" id="graphs" role="tabpanel" aria-labelledby="id_tab_graphs">
@@ -138,5 +143,6 @@
     {{ results.plot_params|json_script:"plot_params" }}
     <script type="module" src="{% static 'js/results/graphs.js' %}"></script>
     <script type="module" src="{% static 'js/results/table.js' %}"></script>
+    <script type="module" src="{% static 'js/results/pandas_profiling_report.js' %}"></script>
 {% endif %}
 {% endblock extrascripts %}

@@ -14,6 +14,7 @@ from bokeh.embed import json_item
 from bokeh.tile_providers import get_provider, Vendors
 from pyproj import Proj, transform
 import pandas as pd
+import logging
 
 
 class QueryCreate(generic.CreateView):
@@ -131,3 +132,13 @@ def results_create_graph(request, pk, div, max_width, max_height, plot_type, x=N
 
     data = json_item(plot, div)
     return JsonResponse(data)
+
+
+def results_pandas_profiling_report(request, pk):
+    query = get_object_or_404(Query, pk=pk)
+    results = query.get_results(request, get_from_cache=True)
+    try:
+        return HttpResponse(results.generate_report_html())
+    except Exception as e:
+        logging.exception(f'Error creating profile report: {e}')
+        return HttpResponse(status=500)
