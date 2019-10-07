@@ -1,0 +1,26 @@
+/*
+	MBTA API Playground basic styles
+*/
+
+body {
+	padding-top: 65px;
+	padding-bottom: 65px;
+}
+
+
+.checkbox-list {
+	list-style: none;
+	padding-inline-start: 10px;
+}
+
+/*
+	Mobile settings
+*/
+
+@media screen and (max-width: 450px) {
+
+	body {
+		font-size: small;
+	}
+
+}
