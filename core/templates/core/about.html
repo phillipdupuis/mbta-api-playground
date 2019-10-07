@@ -2,13 +2,21 @@
 
 {% block content %}
 <div class="container">
-	<h2 class="bd-title py-md-3">About MBTA API Playground</h2>
-	<p>Design and build your own queries, then explore the results. Export them to CSV, or create bokeh plots.</p>
-    <h3>Resources</h3>
-    <ul>
-    	<li><a href="https://www.mbta.com/developers/v3-api">MBTA Developers Page</a></li>
-    	<li><a href="https://api-v3.mbta.com/docs/swagger/index.html">Swagger API Documentation</a></li>
-    	<li><a href="https://developers.google.com/transit/gtfs/">GTFS Overview</a></li>
-    </ul>
+	<h5 class="bd-title py-md-3">About</h5>
+	<p>
+		This is a tool for learning how to interact with the MBTA V3 API.
+	</p>
+	<p>
+		You can build and execute complicated queries, customizing the objects, attributes, and filters.  The results are then transformed into a pandas dataframe for easy exploration.
+	</p>
+	<a class="btn btn-primary" href="{% url 'queries:create' %}" role="button">Go create a query</a>
+	<hr>
+  <h5>Resources</h5>
+  <ul>
+  	<li><a href="https://github.com/phillipdupuis/mbta-api-playground">Source code</a></li>
+   	<li><a href="https://www.mbta.com/developers/v3-api">MBTA Developers Page</a></li>
+    <li><a href="https://api-v3.mbta.com/docs/swagger/index.html">MBTA V3 API Documentation</a></li>
+    <li><a href="https://developers.google.com/transit/gtfs/">GTFS Overview</a></li>
+   </ul>
 </div>
 {% endblock %}

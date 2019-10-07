@@ -328,6 +328,7 @@ def get_error_details(response: requests.Response) -> str:
         return ''
 
 
+
 def plot_params(df) -> dict:
     types = OrderedDict()
     x_options_per_type = dict()

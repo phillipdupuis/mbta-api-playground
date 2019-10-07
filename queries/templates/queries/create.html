@@ -1,56 +1,58 @@
 {% extends 'core/base.html' %}
 {% load static %}
-{% block extrastyles %}
-    <link rel="stylesheet" type="text/css" href="{% static 'css/queries_create.css' %}">
-{% endblock extrastyles %}
 {% load widget_tweaks %}
+
+{% block extrastyles %}
+  <link rel="stylesheet" type="text/css" href="{% static 'queries/css/create.css' %}">
+{% endblock extrastyles %}
+
 {% block content %}
-{% include "core/modal.html" %}
-{% include "core/modal_loading_indicator.html" %}
-<div class="container">
-    <h2 class="bd-title py-md-3">Create a query</h2>
-    <p>Select an object, any additional objects you'd like to include, and the attributes (i.e. columns) that you want in the results.</p>
+  {% include "core/modal.html" %}
+  {% include "core/loading_screen.html" %}
+  <div class="container">
+    <h3 class="bd-title py-md-3">Create a query</h3>
+    <p>Select the objects and attributes you'd like to have returned, as well as any filters to refine the results.</p>
     <hr>
     <form action="" method="post">{% csrf_token %}
-        <div class="form-group{% if form.primary_object.errors %} invalid{% endif %}">
-            {{ form.primary_object.label_tag }}
-            {% render_field form.primary_object class+="form-control" %}
-            {% for error in form.primary_object.errors %}
-            <p class="help-block">{{ error }}</p>
-            {% endfor %}
-        </div>
-        <hr>
-        <div class="form-group{% if form.includes.errors %} invalid{% endif %}">
-            {{ form.includes.label_tag }}
-            {{ form.includes }}
-            {% for error in form.includes.errors %}
-            <p class="help-block">{{ error }}</p>
-            {% endfor %}
-        </div>
-        <hr>
-        <div class="form-group{% if form.attributes.errors %} invalid{% endif %}">
-            {{ form.attributes.label_tag }}
-            {{ form.attributes }}
-            {% for error in form.attributes.errors %}
-            <p class="help-block">{{ error }}</p>
-            {% endfor %}
-        </div>
-        <hr>
-        {{ form.filters }}
-        <div class="form-group {% if form.filters.errors %} invalid{% endif %}">
-            <label for="filters_list">Filters</label>
-            <div class="form-group" id="filters_list"></div>
-            {% for error in form.filters.errors %}
-            <p class="help-block">{{ error }}</p>
-            {% endfor %}
-        </div>
-        <hr>
-        <button type="submit" class="save btn btn-primary btn-lg" id="get_results_btn">Get Results</button>
+      <div class="form-group{% if form.primary_object.errors %} invalid{% endif %}">
+        {{ form.primary_object.label_tag }}
+        {% render_field form.primary_object class+="form-control" %}
+        {% for error in form.primary_object.errors %}
+          <p class="help-block">{{ error }}</p>
+        {% endfor %}
+      </div>
+      <hr>
+      <div class="form-group{% if form.includes.errors %} invalid{% endif %}">
+        {{ form.includes.label_tag }}
+        {{ form.includes }}
+        {% for error in form.includes.errors %}
+          <p class="help-block">{{ error }}</p>
+        {% endfor %}
+      </div>
+      <hr>
+      <div class="form-group{% if form.attributes.errors %} invalid{% endif %}">
+        {{ form.attributes.label_tag }}
+        {{ form.attributes }}
+        {% for error in form.attributes.errors %}
+          <p class="help-block">{{ error }}</p>
+        {% endfor %}
+      </div>
+      <hr>
+      {{ form.filters }}
+      <div class="form-group {% if form.filters.errors %} invalid{% endif %}">
+        <label for="filters_list">Filters</label>
+        <div class="form-group" id="filters_list"></div>
+        {% for error in form.filters.errors %}
+          <p class="help-block">{{ error }}</p>
+        {% endfor %}
+      </div>
+      <hr>
+      <button type="submit" class="save btn btn-primary btn-lg" id="get_results_btn">Get Results</button>
     </form>
-</div>
+  </div>
 {% endblock content %}
 
 {% block extrascripts %}
-{{ endpoints|json_script:"endpoints" }}
-<script type="module" src="{% static 'js/create/main.js' %}"></script>
+  {{ endpoints|json_script:"endpoints" }}
+  <script type="module" src="{% static 'queries/js/create/main.js' %}"></script>
 {% endblock extrascripts %}
