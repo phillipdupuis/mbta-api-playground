@@ -1,5 +1,8 @@
 {% extends 'core/base.html' %}
 {% load static %}
+{% block extrastyles %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/queries_request_list.css' %}">
+{% endblock extrastyles %}
 {% load widget_tweaks %}
 {% load pagination_extras %}
 {% block content %}

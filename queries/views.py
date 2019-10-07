@@ -65,6 +65,7 @@ class QueryResults(generic.DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['results'] = context['query'].get_results(self.request)
+        context['report_correlations'] = ['pearson', 'spearman', 'kendall', 'phi_k', 'cramers', 'recoded']
         return context
 
 
@@ -134,11 +135,13 @@ def results_create_graph(request, pk, div, max_width, max_height, plot_type, x=N
     return JsonResponse(data)
 
 
-def results_pandas_profiling_report(request, pk):
+def results_create_report(request, pk, correlations):
     query = get_object_or_404(Query, pk=pk)
     results = query.get_results(request, get_from_cache=True)
+    correlations = None if correlations == 'NONE' else correlations.split(',')
     try:
-        return HttpResponse(results.generate_report_html())
+        report = results.generate_report_html(correlations=correlations)
+        return HttpResponse(report)
     except Exception as e:
         logging.exception(f'Error creating profile report: {e}')
         return HttpResponse(status=500)

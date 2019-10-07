@@ -1,42 +1,57 @@
-const loadedContent = {
-    pandasProfilingReport: false,
-};
+document.getElementById('report_form').onsubmit = (event) => {
+    event.preventDefault();
+    createReport();
+}
 
 
-$('#id_tab_report').on('show.bs.tab', function (e) {
-    if (!(loadedContent.pandasProfilingReport)) {
-        embedPandasProfilingReport();
-    }
-});
-
-
-async function embedPandasProfilingReport() {
-
-    document.getElementById('loading-screen-message').innerText = 'Generating Pandas Profiling Report - this may take a while...';
-    $('#modal-loading-screen').modal('show');
-
-    const container = document.getElementById('report-container');
+async function createReport() {
+    showLoadingScreen();
+    const formContainer = document.getElementById('report_form_container');
+    const reportContainer = document.getElementById('report-container');
+    const url = reportUrl();
     try {
-        const response = await fetch(container.dataset.endpoint);
+        const response = await fetch(url);
         if (response.status === 200) {
             const srcdoc = await response.text();
             const iframe = document.createElement('iframe');
             iframe.setAttribute('id', 'report-iframe');
-            iframe.setAttribute('width', '100%');
+            iframe.setAttribute('class', 'w-100');
             iframe.setAttribute('srcdoc', srcdoc);
             iframe.onload = resizeIframe;
-            container.append(iframe);
+            reportContainer.append(iframe);
         } else {
-            container.innerText = 'Sorry, something went wrong.';
+            reportContainer.innerText = 'Sorry, something went wrong.';
         }
     } catch (e) {
-        container.innerText = 'Sorry, something went wrong.';
+        reportContainer.innerText = 'Sorry, something went wrong.';
     }
+    formContainer.hidden = true;
+    reportContainer.hidden = false;
+    hideLoadingScreen();
+}
 
-    loadedContent.pandasProfilingReport = true;
+
+function showLoadingScreen() {
+    document.getElementById('loading-screen-message').innerText = 'Generating report - this may take a while...';
+    $('#modal-loading-screen').modal('show');
+}
+
+
+function hideLoadingScreen() {
     $('#modal-loading-screen').modal('hide');
+}
 
-    console.log('done');
+
+function reportUrl() {
+    let url = document.getElementById('report_form').dataset.endpoint;
+    const correlations = (
+        Array.from(document.getElementById('id_report_correlations').querySelectorAll('input[type=checkbox]'))
+            .filter(elem => elem.checked)
+            .map(elem => elem.value)
+    );
+    const correlationsParam = (correlations.length > 0) ? correlations.join(',') : 'NONE';
+    url += `${correlationsParam}/`;
+    return url;
 }
 
 

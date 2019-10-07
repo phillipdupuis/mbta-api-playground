@@ -12,12 +12,12 @@ export function add(filterPkList) {
         .forEach(filter => {
 
             const label = document.createElement('label');
-            label.className = 'col-sm-3 col-form-label col-form-label-sm text-truncate';
+            label.className = 'col-sm-3 col-form-label text-truncate';
             label.innerText = filter.name;
             label.htmlFor = filter.id;
 
             const input = document.createElement('input');
-            input.className = 'form-control form-control-sm text-left text-truncate';
+            input.className = 'form-control text-left text-truncate';
             input.setAttribute('type', 'button');
             input.onclick = () => editFilter(input);
             input.dataset.id = filter.id;

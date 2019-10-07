@@ -1,14 +1,12 @@
 {% extends 'core/base.html' %}
 {% load static %}
+{% block extrastyles %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/queries_create.css' %}">
+{% endblock extrastyles %}
 {% load widget_tweaks %}
 {% block content %}
 {% include "core/modal.html" %}
 {% include "core/modal_loading_indicator.html" %}
-<style>
-    ul {
-        list-style: none;
-    }
-</style>
 <div class="container">
     <h2 class="bd-title py-md-3">Create a query</h2>
     <p>Select an object, any additional objects you'd like to include, and the attributes (i.e. columns) that you want in the results.</p>
@@ -41,7 +39,7 @@
         {{ form.filters }}
         <div class="form-group {% if form.filters.errors %} invalid{% endif %}">
             <label for="filters_list">Filters</label>
-            <div class="form-group pl-3" id="filters_list"></div>
+            <div class="form-group" id="filters_list"></div>
             {% for error in form.filters.errors %}
             <p class="help-block">{{ error }}</p>
             {% endfor %}

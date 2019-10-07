@@ -1,5 +1,8 @@
 {% extends 'core/base.html' %}
 {% load static %}
+{% block extrastyles %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/queries_results.css' %}">
+{% endblock extrastyles %}
 {% load widget_tweaks %}
 {% block content %}
 {% include "core/modal.html" %}
@@ -62,7 +65,7 @@
         </dl>
     </div>
     <!-- full table -->
-    <div class="tab-pane p-3" id="full-table" role="tabpanel" aria-labelledby="id_tab_table">
+    <div class="tab-pane" id="full-table" role="tabpanel" aria-labelledby="id_tab_table">
         <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
             <div class="btn-toolbar mb-2 mb-md-0">
                 <div class="btn-group mr-2">
@@ -97,15 +100,37 @@
         </div>
     </div>
     <!-- report -->
-    <div class="tab-pane p-3" id="report" role="tabpanel" aria-labelledby="id_tab_report">
-        <div id="report-container" data-endpoint="{% url 'queries:results-report' pk=query.pk %}"><!-- javascript will embed iframe --></div>
+    <div class="tab-pane" id="report" role="tabpanel" aria-labelledby="id_tab_report">
+        <!-- form for specifying parameters -->
+        <div class="p-3" id="report_form_container">
+            <form action="" id="report_form" data-endpoint="{% url 'queries:results' pk=query.pk %}report/">
+                <div class="form-group">
+                    <div class="alert alert-warning" role="alert">
+                        Calculating correlations significantly increases the time required to generate a report.
+                    </div>
+                    <label for="id_report_correlations">Correlations</label>
+                    <ul id="id_report_correlations" class="form-checkbox-list">
+                        {% for correlation in report_correlations %}
+                            <li>
+                                <label for="id_report_correlations_{{ correlation }}">
+                                    <input type="checkbox" value="{{ correlation }}" id="id_report_correlations_{{ correlation }}">
+                                    {{ correlation }}
+                                </label>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <button type="submit" class="save btn btn-primary" id="report_form_submit_btn">Generate report</button>
+            </form>
+        </div>
+        <div id="report-container"><!-- javascript will embed iframe --></div>
     </div>
     <!-- raw data -->
-    <div class="tab-pane p-3" id="raw-data" role="tabpanel" aria-labelledby="id_tab_raw_data">
+    <div class="tab-pane" id="raw-data" role="tabpanel" aria-labelledby="id_tab_raw_data">
         <pre>{{ results.pretty_json }}</pre>
     </div>
     <!-- graphs -->
-    <div class="tab-pane p-3" id="graphs" role="tabpanel" aria-labelledby="id_tab_graphs">
+    <div class="tab-pane" id="graphs" role="tabpanel" aria-labelledby="id_tab_graphs">
         <div class="col-md-8 align-items-center" id="id_graphs">
             <div class="card">
                 <div class="card-header">

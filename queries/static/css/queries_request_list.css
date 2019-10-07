@@ -1,0 +1,16 @@
+/* for mobile */
+@media screen and (max-width: 450px) {
+
+	h2 {
+		font-size: 1rem;
+	}
+
+	body {
+		font-size: small;
+	}
+
+	.list-group-item {
+		padding-left: 0;
+		padding-right: 0;
+	}
+}
