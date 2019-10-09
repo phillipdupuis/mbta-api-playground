@@ -33,7 +33,6 @@ async function handleChangePrimaryObject(pk) {
 
 	if (pk) {
 		const object = await params.objectProps(pk);
-		console.log('object is', object);
 		checkboxes.show(elements.includes, object.includes);
 		checkboxes.showAndSelect(elements.attributes, object.attributes);
 		filters.add(object.filters);

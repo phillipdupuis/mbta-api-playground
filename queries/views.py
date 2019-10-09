@@ -1,19 +1,12 @@
 from django.shortcuts import get_object_or_404
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse
 from django.urls import reverse, reverse_lazy
 from django.views import generic
 from django.db import transaction
-from django.db.models import Max as db_models_Max
 from .forms import QueryForm
 from .models import Query, QueryFilter, Request
 from params.models import MbtaFilter
 import json
-from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource
-from bokeh.embed import json_item
-from bokeh.tile_providers import get_provider, Vendors
-from pyproj import Proj, transform
-import pandas as pd
 import logging
 
 
@@ -82,60 +75,10 @@ def results_as_csv(request, pk):
     return response
 
 
-def results_create_graph(request, pk, div, max_width, max_height, plot_type, x=None, y=None):
-    """
-    Given a set of parameters, produces a bokeh plot.
-    Sends back JSON for an interactive plot element that will be embedded in the page.
-    """
-    query = get_object_or_404(Query, pk=pk)
-    results = query.get_results(request, get_from_cache=True)
-    width = min(max_width, 600)
-    height = min(max_height, 600)
-
-    if plot_type == 'BAR':
-        value_counts = results.df[x].value_counts()
-        values = value_counts.index.values.tolist()
-        counts = value_counts.values.tolist()
-        plot = figure(x_range=[str(v) for v in values], title=f'{x} counts', plot_width=width, plot_height=height)
-        plot.vbar(x=values, top=counts, width=0.9)
-        plot.y_range.start = 0
-
-    elif plot_type.endswith('LOCATIONS'):
-
-        latlon_proj = Proj(init='epsg:4326')
-        webmercator_proj = Proj(init='epsg:3857')
-        col_prefix = plot_type[:-len('LOCATIONS')]
-        lat_column = f'{col_prefix}latitude'
-        lon_column = f'{col_prefix}longitude'
-
-        def transform_coordinates(data):
-            x, y = transform(latlon_proj, webmercator_proj,
-                             data[lon_column], data[lat_column])
-            return pd.Series({'x': x, 'y': y})
-
-        coords = results.df.apply(transform_coordinates, axis=1)
-
-        title = f'{query.primary_object.name} Locations' if not col_prefix else f'{col_prefix.rstrip("_")} Locations'
-        plot = figure(
-            x_range=(coords.x.min(), coords.x.max()),
-            y_range=(coords.y.min(), coords.y.max()),
-            x_axis_type='mercator',
-            y_axis_type='mercator',
-            title=title,
-            plot_width=width,
-            plot_height=height,
-        )
-        plot.add_tile(get_provider(Vendors.CARTODBPOSITRON_RETINA))
-        source = ColumnDataSource(
-            data=dict(x=coords.x.tolist(), y=coords.y.tolist()))
-        plot.circle(x='x', y='y', size=8, fill_color='blue',
-                    fill_alpha=0.8, source=source)
-
-    data = json_item(plot, div)
-    return JsonResponse(data)
-
-
 def results_create_report(request, pk, correlations):
+    """ Generates a pandas profiling report. Spits back the HTML for the entire doc.
+        Unfortunately this includes all the bootstrap stuff, so it's huge.
+        Gotta embed it in an iframe """
     query = get_object_or_404(Query, pk=pk)
     results = query.get_results(request, get_from_cache=True)
     correlations = None if correlations == 'NONE' else correlations.split(',')

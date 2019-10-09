@@ -9,6 +9,11 @@ import pandas as pd
 import pandas_profiling
 import matplotlib
 matplotlib.use('Agg')
+from bokeh.plotting import figure
+from bokeh.models import ColumnDataSource, HoverTool
+from bokeh.embed import json_item
+from bokeh.tile_providers import get_provider, Vendors
+from pyproj import Proj, transform
 from params.models import MbtaObject, MbtaInclude, MbtaAttribute, MbtaFilter
 
 
@@ -172,7 +177,6 @@ class Results:
                 self.error = None
                 self.error_details = None
                 self.response_size_bytes = len(response.content)
-                self.plot_params = plot_params(self.df)
             except AssertionError as error:
                 self.df = None
                 self.error = error
@@ -217,6 +221,60 @@ class Results:
         corr_options = ['pearson', 'spearman', 'kendall', 'phi_k', 'cramers', 'recoded']
         corrs = {k: True if k in correlations else False for k in corr_options}
         return df.profile_report(correlations=corrs).to_html()
+
+    def location_plots(self):
+        """ blah blah blah """
+        latlon_proj = Proj(init='epsg:4326')
+        webmercator_proj = Proj(init='epsg:3857')
+
+        def get_coord_transform_func(lat_column, lon_column):
+            """ creates and returns a function for transforming lat & lon columns into x-y"""
+            def transform_func(data):
+                x, y = transform(latlon_proj, webmercator_proj, data[lon_column], data[lat_column])
+                return pd.Series({'x': x, 'y': y})
+
+            return transform_func
+
+        lat_columns = [c for c in self.df.columns if c.endswith('latitude')]
+        lon_columns = [c for c in self.df.columns if c.endswith('longitude')]
+        plots = []
+
+        for lat_column in lat_columns:
+            col_prefix = lat_column[:-len('latitude')]
+            lon_column = f'{col_prefix}longitude'
+            if lon_column in lon_columns:
+                transform_func = get_coord_transform_func(lat_column, lon_column)
+                coords = self.df.apply(transform_func, axis=1)
+                title = 'Locations' if not col_prefix else f'{col_prefix.rstrip("_").title()} Locations'
+                source = ColumnDataSource(data=dict(
+                    x=coords.x.tolist(),
+                    y=coords.y.tolist(),
+                    id=self.df[f'{col_prefix}id'].tolist(),
+                    latitude=self.df[lat_column].tolist(),
+                    longitude=self.df[lon_column].tolist()
+                ))
+                hover = HoverTool(tooltips=[
+                    ('id', '@id'),
+                    ('latitude', '@latitude'),
+                    ('longitude', '@longitude')
+                ])
+                plot = figure(
+                    x_range=(coords.x.min(), coords.x.max()),
+                    y_range=(coords.y.min(), coords.y.max()),
+                    x_axis_type='mercator',
+                    y_axis_type='mercator',
+                    title=title,
+                    plot_width=600,
+                    plot_height=600,
+                    sizing_mode='scale_both',
+                )
+                plot.add_tools(hover)
+                plot.add_tile(get_provider(Vendors.CARTODBPOSITRON_RETINA))
+                plot.circle(x='x', y='y', size=8, fill_color='blue', fill_alpha=0.8, source=source)
+                data = json_item(plot, 'id_location_plots')
+                plots.append(data)
+
+        return plots
 
 
 def create_DataFrame(response: requests.Response) -> pd.DataFrame:
@@ -326,31 +384,3 @@ def get_error_details(response: requests.Response) -> str:
         return '\n'.join(details)
     except KeyError:
         return ''
-
-
-
-def plot_params(df) -> dict:
-    types = OrderedDict()
-    x_options_per_type = dict()
-
-    def bar_criteria(column):
-        return (df[column].dtype.name == 'category') and (1 < df[column].nunique() < 16)
-
-    bar_options = [c for c in df.columns if bar_criteria(c)]
-
-    if any(bar_options):
-        types['BAR'] = 'Bar Graph'
-        x_options_per_type['BAR'] = bar_options
-
-    for lat_column in [c for c in df.columns if c.endswith('latitude')]:
-        prefix = lat_column[:-len('latitude')]
-        if f'{prefix}longitude' in df.columns:
-            type_int = 'LOCATIONS' if not prefix else f'{prefix}LOCATIONS'
-            type_ext = 'Locations' if not prefix else f'{prefix.rstrip("_")} Locations'
-            types[type_int] = type_ext
-            x_options_per_type[type_int] = []
-
-    return {
-        'types': types,
-        'x_options_per_type': x_options_per_type,
-    }

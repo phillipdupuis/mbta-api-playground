@@ -32,9 +32,9 @@
       <li class="nav-item">
         <a class="nav-link" data-toggle="tab" href="#raw-data" id="id_tab_raw_data" role="tab" aria-controls="raw-data" aria-selected="false">JSON</a>
       </li>
-      {% if not results.plot_params.types|length_is:"0" %}
+      {% if not results.location_plots|length_is:"0" %}
         <li class="nav-item">
-          <a class="nav-link" data-toggle="tab" href="#graphs" id="id_tab_graphs" role="tab" aria-controls="graphs" aria-selected="false">Plots</a>
+          <a class="nav-link" data-toggle="tab" href="#locations" id="id_tab_locations" role="tab" aria-controls="locations" aria-selected="false">Locations</a>
         </li>
       {% endif %}
     </ul>
@@ -132,34 +132,9 @@
       <div class="tab-pane" id="raw-data" role="tabpanel" aria-labelledby="id_tab_raw_data">
         <pre>{{ results.pretty_json }}</pre>
       </div>
-      <!-- graphs -->
-      <div class="tab-pane" id="graphs" role="tabpanel" aria-labelledby="id_tab_graphs">
-        <div class="col-md-8 align-items-center" id="id_graphs">
-          <div class="card">
-            <div class="card-header">
-              <form action="" id="graph_form" method="post">{% csrf_token %}
-                <div class="form-group row">
-                  <label for="graph_type" class="col-sm-2 col-form-label">Type</label>
-                  <div class="col-sm-10">
-                    <select class="form-control" id="graph_type">
-                      {% for k, v in results.plot_params.types.items %}
-                        <option value="{{ k }}">{{ v|title }}</option>
-                      {% endfor %}
-                    </select>
-                  </div>
-                </div>
-                <div class="form-group row">
-                  <label for="graph_x" class="col-sm-2 col-form-label">X-axis</label>
-                  <div class="col-sm-10">
-                    <select class="form-control" id="graph_x"></select>
-                  </div>
-                </div>
-                <button type="submit" class="save btn btn-primary" id="create_graph_btn" data-endpoint="{% url 'queries:results' pk=query.pk %}create_graph/">Create</button>
-              </form>
-            </div>
-            <div class="card-body" id="graph_container"></div>
-          </div>
-        </div>
+      <!-- locations -->
+      <div class="tab-pane" id="locations" role="tabpanel" aria-labelledby="id_tab_locations">
+        <div id="id_location_plots"><!-- bokeh will embed them --></div>
       </div>
     </div>
   {% endif %}
@@ -168,10 +143,10 @@
 {% block extrascripts %}
   {% if not results.error %}
     <script type="text/javascript" src="https://cdn.pydata.org/bokeh/release/bokeh-1.3.4.min.js"></script>
-    <script type="text/javascript" src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.3.4.min.js"></script>
-    {{ results.plot_params|json_script:"plot_params" }}
-    <script type="module" src="{% static 'queries/js/results/graphs.js' %}"></script>
+    <script type="text/javascript" src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.3.4.min.js"></script>\
+    {{ results.location_plots|json_script:"location_plots" }}
     <script type="module" src="{% static 'queries/js/results/table.js' %}"></script>
-    <script type="module" src="{% static 'queries/js/results/pandas_profiling_report.js' %}"></script>
+    <script type="module" src="{% static 'queries/js/results/report.js' %}"></script>
+    <script type="module" src="{% static 'queries/js/results/locations.js' %}"></script>
   {% endif %}
 {% endblock extrascripts %}
