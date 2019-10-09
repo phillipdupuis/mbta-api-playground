@@ -20,6 +20,11 @@ Upon executing a query, the user is brought to a results page where they can vie
 * Interactive geolocation plots for any objects which have 'latitude' and 'longitude' attributes.
     * These plots are generated using [Bokeh](https://bokeh.pydata.org/en/latest/docs/user_guide/geo.html)
 
+## Built With
+* Django
+* Django REST framework
+* Vanilla ES6 JavaScript (the only exception is jQuery was used for showing/hiding modals)
+
 ## Example: finding facilities which have bike storage or electric car chargers
 <details>
    <summary>Creating the query</summary>
