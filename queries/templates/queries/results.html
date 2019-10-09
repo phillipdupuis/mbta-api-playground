@@ -129,12 +129,14 @@
         <div id="report-container"><!-- javascript will embed iframe --></div>
       </div>
       <!-- raw data -->
-      <div class="tab-pane" id="raw-data" role="tabpanel" aria-labelledby="id_tab_raw_data">
+      <div class="tab-pane p-3" id="raw-data" role="tabpanel" aria-labelledby="id_tab_raw_data">
         <pre>{{ results.pretty_json }}</pre>
       </div>
       <!-- locations -->
       <div class="tab-pane" id="locations" role="tabpanel" aria-labelledby="id_tab_locations">
-        <div id="id_location_plots"><!-- bokeh will embed them --></div>
+        <div class="pr-3">
+          <div id="id_location_plots"><!-- bokeh will embed them --></div>
+        </div>
       </div>
     </div>
   {% endif %}

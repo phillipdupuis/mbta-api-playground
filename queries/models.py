@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
+from django.utils.formats import date_format
 from typing import List
 from collections import OrderedDict
 import json
@@ -64,7 +65,7 @@ class Query(models.Model):
         if get_from_cache and (key in request.session):
             results = request.session[key]
         else:
-            results = Results(self.get_response(request))
+            results = Results(self, self.get_response(request))
             request.session[key] = results
         return results
 
@@ -168,7 +169,8 @@ class Results:
     the results of their queries.
     """
 
-    def __init__(self, response: requests.Response):
+    def __init__(self, query: Query, response: requests.Response):
+        self.query = query
         self.response = response
         if response.ok:
             try:
@@ -223,12 +225,14 @@ class Results:
         return df.profile_report(correlations=corrs).to_html()
 
     def location_plots(self):
-        """ blah blah blah """
+        """ If there are latitude/longitude columns, use them to build bokeh geographical plots.
+            The JSON data built here will be consumed by a script in the page and used to embed
+            interactive plots."""
         latlon_proj = Proj(init='epsg:4326')
         webmercator_proj = Proj(init='epsg:3857')
 
         def get_coord_transform_func(lat_column, lon_column):
-            """ creates and returns a function for transforming lat & lon columns into x-y"""
+            """ creates and returns a function for transforming lat & lon columns into web mercator"""
             def transform_func(data):
                 x, y = transform(latlon_proj, webmercator_proj, data[lon_column], data[lat_column])
                 return pd.Series({'x': x, 'y': y})
@@ -240,12 +244,19 @@ class Results:
         plots = []
 
         for lat_column in lat_columns:
+
             col_prefix = lat_column[:-len('latitude')]
             lon_column = f'{col_prefix}longitude'
+
             if lon_column in lon_columns:
+
                 transform_func = get_coord_transform_func(lat_column, lon_column)
                 coords = self.df.apply(transform_func, axis=1)
-                title = 'Locations' if not col_prefix else f'{col_prefix.rstrip("_").title()} Locations'
+
+                timestamp = date_format(timezone.localtime(timezone.now()), 'DATETIME_FORMAT')
+                object_name = self.query.primary_object.name if not col_prefix else col_prefix.rstrip("_").title()
+                title = f'{object_name} locations as of {timestamp}'
+
                 source = ColumnDataSource(data=dict(
                     x=coords.x.tolist(),
                     y=coords.y.tolist(),
