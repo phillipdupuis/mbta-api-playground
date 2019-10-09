@@ -145,7 +145,7 @@
 {% block extrascripts %}
   {% if not results.error %}
     <script type="text/javascript" src="https://cdn.pydata.org/bokeh/release/bokeh-1.3.4.min.js"></script>
-    <script type="text/javascript" src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.3.4.min.js"></script>\
+    <script type="text/javascript" src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.3.4.min.js"></script>
     {{ results.location_plots|json_script:"location_plots" }}
     <script type="module" src="{% static 'queries/js/results/table.js' %}"></script>
     <script type="module" src="{% static 'queries/js/results/report.js' %}"></script>
