@@ -60,7 +60,7 @@ class Query(models.Model):
         return response
 
     def get_results(self, request, get_from_cache=False):
-        """ Get results. Use the session cache to store them for quick access """
+        """ Get results. Use the session cache to store them for quick access later."""
         key = f'query_{self.id}_results'
         if get_from_cache and (key in request.session):
             results = request.session[key]
@@ -133,23 +133,23 @@ class Request(models.Model):
 
     def params(self) -> OrderedDict:
         params = OrderedDict()
+        # Included objects
         if self.query.includes.all().exists():
-            params['include'] = ','.join(
-                (x.name for x in self.query.includes.all()))
+            params['include'] = ','.join((x.name for x in self.query.includes.all()))
+        # Filters
         for f in self.query.filters.all():
             params[f'filter[{f.on_attribute.name}]'] = f.values
+        # Fields/attributes (parameter is only added/needed if some attributes will be excluded)
         for o in self.query.all_objects():
-            sel_attrs = [
-                a.name for a in self.query.attributes.filter(for_object=o)]
-            all_attrs = [a.name for a in o.attributes.all()]
-            if sorted(sel_attrs) != sorted(all_attrs):
-                params[f'fields[{o.name.lower()}]'] = ",".join(sel_attrs)
+            attributes = [a.name for a in self.query.attributes.filter(for_object=o)]
+            if len(attributes) < len(o.attributes.all()):
+                params[f'fields[{o.name.lower()}]'] = ','.join(attributes)
+
         return params
 
     def get(self) -> requests.Response:
         """ Converts a query into a request and then gets the response """
-        response = requests.get(
-            self.url(), headers=self.headers(), params=self.params())
+        response = requests.get(self.url(), headers=self.headers(), params=self.params())
         self.datetime = timezone.now()
         self.response_status_code = response.status_code
         self.response_size_bytes = len(response.content)
@@ -228,13 +228,14 @@ class Results:
         """ If there are latitude/longitude columns, use them to build bokeh geographical plots.
             The JSON data built here will be consumed by a script in the page and used to embed
             interactive plots."""
-        latlon_proj = Proj(init='epsg:4326')
-        webmercator_proj = Proj(init='epsg:3857')
 
-        def get_coord_transform_func(lat_column, lon_column):
+        def coord_transform_func(lat_col, lon_col):
             """ creates and returns a function for transforming lat & lon columns into web mercator"""
+            latlon_proj = Proj(init='epsg:4326')
+            webmercator_proj = Proj(init='epsg:3857')
+
             def transform_func(data):
-                x, y = transform(latlon_proj, webmercator_proj, data[lon_column], data[lat_column])
+                x, y = transform(latlon_proj, webmercator_proj, data[lon_col], data[lat_col])
                 return pd.Series({'x': x, 'y': y})
 
             return transform_func
@@ -243,26 +244,21 @@ class Results:
         lon_columns = [c for c in self.df.columns if c.endswith('longitude')]
         plots = []
 
-        for lat_column in lat_columns:
+        for lat_col in lat_columns:
+            col_pfx = lat_col[:-len('latitude')]
+            lon_col = f'{col_pfx}longitude'
 
-            col_prefix = lat_column[:-len('latitude')]
-            lon_column = f'{col_prefix}longitude'
-
-            if lon_column in lon_columns:
-
-                transform_func = get_coord_transform_func(lat_column, lon_column)
-                coords = self.df.apply(transform_func, axis=1)
-
+            if lon_col in lon_columns:
+                coords = self.df.apply(coord_transform_func(lat_col, lon_col), axis=1)
                 timestamp = date_format(timezone.localtime(timezone.now()), 'DATETIME_FORMAT')
-                object_name = self.query.primary_object.name if not col_prefix else col_prefix.rstrip("_").title()
+                object_name = self.query.primary_object.name if not col_pfx else col_pfx.rstrip('_').title()
                 title = f'{object_name} locations as of {timestamp}'
-
                 source = ColumnDataSource(data=dict(
                     x=coords.x.tolist(),
                     y=coords.y.tolist(),
-                    id=self.df[f'{col_prefix}id'].tolist(),
-                    latitude=self.df[lat_column].tolist(),
-                    longitude=self.df[lon_column].tolist()
+                    id=self.df[f'{col_pfx}id'].tolist(),
+                    latitude=self.df[lat_col].tolist(),
+                    longitude=self.df[lon_col].tolist()
                 ))
                 hover = HoverTool(tooltips=[
                     ('id', '@id'),
@@ -282,8 +278,7 @@ class Results:
                 plot.add_tools(hover)
                 plot.add_tile(get_provider(Vendors.CARTODBPOSITRON_RETINA))
                 plot.circle(x='x', y='y', size=8, fill_color='blue', fill_alpha=0.8, source=source)
-                data = json_item(plot, 'id_location_plots')
-                plots.append(data)
+                plots.append(json_item(plot, 'id_location_plots'))
 
         return plots
 
@@ -297,24 +292,23 @@ def create_DataFrame(response: requests.Response) -> pd.DataFrame:
     main_df = clean_DataFrame(main_df)
 
     if 'included' in response.json():
-        main_df = prefix_DataFrame_columns(main_df, f'{main_type}_')
+        main_df.rename(lambda col: f'{main_type}_{col}', axis='columns', inplace=True)
 
         for inc_type, inc_df in pd.DataFrame(response.json()['included']).groupby('type'):
 
-            if main_type == 'route_pattern' and inc_type == 'trip':
+            if inc_type == 'trip' and main_type == 'route_pattern':
                 inc_type = 'representative_trip'
 
             inc_df = clean_DataFrame(inc_df)
-            inc_df = prefix_DataFrame_columns(inc_df, f'{inc_type}_')
+            inc_df.rename(lambda col: f'{inc_type}_{col}', axis='columns', inplace=True)
 
-            main_id_column = f'{main_type}_{inc_type}'
-            if main_id_column == 'line_route':
-                main_id_column = 'line_routes'
-            inc_id_column = f'{inc_type}_id'
+            main_id_col = f'{main_type}_{inc_type}'
+            if main_id_col == 'line_route':
+                main_id_col = 'line_routes'
+            inc_id_col = f'{inc_type}_id'
 
-            main_df = main_df.merge(
-                inc_df, how='left', left_on=main_id_column, right_on=inc_id_column)
-            main_df.drop(columns=[main_id_column], inplace=True)
+            main_df = main_df.merge(inc_df, how='left', left_on=main_id_col, right_on=inc_id_col)
+            main_df.drop(columns=[main_id_col], inplace=True)
 
     return main_df
 
@@ -364,18 +358,6 @@ def clean_DataFrame(df: pd.DataFrame) -> pd.DataFrame:
     df = expand_columns(df, columns=['properties'])
     convert_datetime_columns(df)
     return df
-
-    # # if 'informed_entity' in df.columns:
-    # #     informed_entity = df['informed_entity'].apply(pd.Series).stack().reset_index(level=1, drop=True).apply(pd.Series)
-    # #     df = df.drop(columns=['informed_entity']).join(informed_entity, how='outer').reset_index(drop=True)
-
-
-def prefix_DataFrame_columns(df: pd.DataFrame, prefix: str) -> pd.DataFrame:
-    """ Renames columns, adding a prefix """
-    def rename_function(column_name):
-        return f'{prefix}{column_name}'
-
-    return df.rename(rename_function, axis='columns')
 
 
 def reduce_DataFrame_memory_usage(df: pd.DataFrame) -> None:

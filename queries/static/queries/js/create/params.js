@@ -1,22 +1,8 @@
-const endpoints = JSON.parse(document.getElementById('endpoints').textContent);
-
-const cachedData = {
-    objects: {},
-    includes: {},
-    attributes: {},
-    filters: {},
-}
-
-// simple format function to ensure keys are always the same datatype
-
-function formatPk(pk) {
-    return String(pk);
-}
-
-// Quick & dirty way to hide include/filter/attribute options that aren't working.
-// Really should be handled by editing the "active" field in django admin and then
-// using that to filter querysets.
-
+/**
+ * Quick & dirty way to hide include/filter/attribute options that aren't working.
+ * Really should be handled by editing the "active" field in django admin and then
+ * using that to filter querysets.
+ */
 const hidden = {
     includes: {
         Alert: ['stops', 'routes', 'trips', 'facilities'],
@@ -32,46 +18,71 @@ const hidden = {
         Stop: ['date', 'direction_id', 'latitude', 'longitude', 'radius', 'route', 'route_type'],
         Vehicle: ['direction_id', 'route_type'],
     },
-}
+};
 
-// Public functions 
+/**
+ * Main object for getting parameter properties.
+ * Outside of this module, should only need access to:
+ * Params.objectProps(objectPk)
+ * Params.includeProps(includePk)
+ * Params.filterProps(filterPk)
+ * Params.attributeProps(attributePk)
+ */
+const Params = {
 
-export async function objectProps(pk) {
-    pk = formatPk(pk);
-    if (pk in cachedData.objects) {
-        return cachedData.objects[pk];
-    } else {
-        const response = await fetch(endpoints.params.objects + pk);
-        const data = await response.json();
-        // drop includes/filters/attributes that should be hidden
-        const filterEntries = (data, prop) => {
-            const hiddenNames = hidden[prop][data.name] || [];
-            data[prop] = data[prop].filter(entry => !hiddenNames.includes(entry.name));
-        }
-        ['includes', 'filters', 'attributes'].forEach(prop => filterEntries(data, prop));
-        // put all the data for includes, filters, and attributes in their own spots.
-        const extractNestedItems = (data, prop) => {
-            data[prop].forEach(entry => cachedData[prop][formatPk(entry.id)] = entry);
-            data[prop] = data[prop].map(entry => entry.id);
-        }
-        ['includes', 'filters', 'attributes'].forEach(prop => extractNestedItems(data, prop));
-        // and now store the updated object properties in the cache
-        cachedData.objects[pk] = data;
-        return data;
+  endpoints: JSON.parse(document.getElementById('endpoints').textContent),
+
+  cachedData: {
+    objects: {},
+    includes: {},
+    attributes: {},
+    filters: {},
+  },
+
+  // Drops includes/filters/attributes that should be hidden.
+  removeHiddenEntries(data, prop) {
+    const hiddenEntries = hidden[prop][data.name] || [];
+    data[prop] = data[prop].filter(entry => !hiddenEntries.includes(entry.name));
+  },
+
+  // Extracts the bulk of data for includes, filters, and attributes into separate objects.
+  // Replaces it with an ID so it's simple to get at that data if needed.
+  extractEntries(data, prop) {
+    data[prop].forEach(entry => this.cachedData[prop][String(entry.id)] = entry);
+    data[prop] = data[prop].map(entry => entry.id);
+  },
+
+  // Fetches the properties for an object and stores them in the cache.
+  async loadObject(pk) {
+    const response = await fetch(this.endpoints.params.objects + pk);
+    const data = await response.json();
+    ['includes', 'filters', 'attributes'].forEach(prop => {
+      this.removeHiddenEntries(data, prop);
+      this.extractEntries(data, prop);
+    });
+    this.cachedData.objects[pk] = data;
+  },
+
+  async objectProps(pk) {
+    pk = String(pk);
+    if (!(pk in this.cachedData.objects)) {
+      await this.loadObject(pk);
     }
-}
+    return this.cachedData.objects[pk];
+  },
 
+  includeProps(pk) {
+    return this.cachedData.includes[String(pk)];
+  },
 
-export function includeProps(pk) {
-    return cachedData.includes[formatPk(pk)];
-}
+  attributeProps(pk) {
+    return this.cachedData.attributes[String(pk)];
+  },
 
+  filterProps(pk) {
+    return this.cachedData.filters[String(pk)];
+  },
 
-export function attributeProps(pk) {
-    return cachedData.attributes[formatPk(pk)];
-}
+};
 
-
-export function filterProps(pk) {
-    return cachedData.filters[formatPk(pk)];
-}
+export default Params;

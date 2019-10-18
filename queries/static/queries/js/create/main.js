@@ -1,59 +1,60 @@
-import * as checkboxes from './checkboxes.js';
-import * as filters from './filters.js';
-import * as params from './params.js';
-import elements from './elements.js';
+import Checkboxes from './checkboxes.js';
+import Filters from './filters.js';
+import Params from './params.js';
+import Elements from './elements.js';
 
 // helper functions
 const showLoadingScreen = (message = 'Loading...') => {
 	document.getElementById('loading-screen-message').innerText = message;
 	$('#modal-loading-screen').modal('show');
 };
+
 const hideLoadingScreen = () => {
 	$('#modal-loading-screen').modal('hide');
 };
 
 // event triggers 
-elements.primaryObject.onchange = (event) => handleChangePrimaryObject(event.target.value);
-elements.includes.onchange = (event) => handleChangeIncludes(event);
-elements.form.onsubmit = () => showLoadingScreen('Retrieving data...');
+Elements.primaryObject.onchange = (event) => handleChangePrimaryObject(event.target.value);
+Elements.includes.onchange = (event) => handleChangeIncludes(event);
+Elements.form.onsubmit = () => showLoadingScreen('Retrieving data...');
 
-// set initial values.
-// also run the onchange logic for the primary object to ensure the form is fully reset. 
-elements.filters.value = JSON.stringify({});
-elements.primaryObject.value = '';
+// set initial values and run the onchange logic for the primary object to ensure the form is fully reset. 
+Elements.filters.value = JSON.stringify({});
+Elements.primaryObject.value = '';
 handleChangePrimaryObject('');
 
-
+/**
+ * Called upon changing the primary object.
+ * We want to make sure that the dependent form fields (includes, attributes, filters)
+ * are all updated appropriately.
+ */
 async function handleChangePrimaryObject(pk) {
-
 	showLoadingScreen();
-	checkboxes.hide(elements.includes, 'all');
-	checkboxes.hide(elements.attributes, 'all');
-	filters.remove();
-
+	Checkboxes.hide(Elements.includes, 'all');
+	Checkboxes.hide(Elements.attributes, 'all');
+	Filters.remove();
 	if (pk) {
-		const object = await params.objectProps(pk);
-		checkboxes.show(elements.includes, object.includes);
-		checkboxes.showAndSelect(elements.attributes, object.attributes);
-		filters.add(object.filters);
+		const object = await Params.objectProps(pk);
+		Checkboxes.show(Elements.includes, object.includes);
+		Checkboxes.showAndSelect(Elements.attributes, object.attributes);
+		Filters.add(object.filters);
 	}
 	hideLoadingScreen();
 }
 
-
+/**
+ * Called upon selecting or deselecting an 'Include' option.
+ * If the include represents an object, we will show/hide that object's
+ * attributes in the 'attributes' checkbox list.
+ */
 async function handleChangeIncludes(event) {
-
-	// Check if the 'include' represents an object.
-	// If it does, show or hide that object's attributes.
-
-	const include = params.includeProps(event.target.value);
-
+	const include = Params.includeProps(event.target.value);
 	if (include.associated_object) {
-		const object = await params.objectProps(include.associated_object);
+		const object = await Params.objectProps(include.associated_object);
 		if (event.target.checked) {
-			checkboxes.showAndSelect(elements.attributes, object.attributes);
+			Checkboxes.showAndSelect(Elements.attributes, object.attributes);
 		} else {
-			checkboxes.hide(elements.attributes, object.attributes);
+			Checkboxes.hide(Elements.attributes, object.attributes);
 		}
 	}
 }

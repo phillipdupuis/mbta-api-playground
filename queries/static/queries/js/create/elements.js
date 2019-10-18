@@ -1,4 +1,4 @@
-const elements = {
+const Elements = {
     primaryObject: document.getElementById('id_primary_object'),
     includes: document.getElementById('id_includes'),
     attributes: document.getElementById('id_attributes'),
@@ -8,4 +8,4 @@ const elements = {
     saveButton: document.getElementById('get_results_btn'),
 };
 
-export default elements;
+export default Elements;

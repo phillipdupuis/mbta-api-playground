@@ -2,7 +2,7 @@ from django.shortcuts import redirect, render
 
 
 def home(request):
-    return redirect('queries:create')
+    return redirect('about')
 
 
 def about(request):

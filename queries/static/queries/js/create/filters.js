@@ -1,101 +1,112 @@
-import * as data from './data.js';
-import * as params from './params.js';
-import elements from './elements.js';
+import Data from './data.js';
+import Params from './params.js';
+import Elements from './elements.js';
 
-// Adding/editing/removing filters
 
-export function add(filterPkList) {
-    const sortFunction = (a, b) => (a.name === 'id') ? -1 : a.name.localeCompare(b.name);
-    filterPkList
-        .map(pk => params.filterProps(pk))
+function showModal(title, handleSaveFunc, bodyElems) {
+  const modal = document.getElementById('modal');
+  modal.querySelector('.modal-title').innerText = title;
+  modal.querySelector('#modal-save-btn').onclick = handleSaveFunc;
+  const body = modal.querySelector('.modal-body');
+  while (body.firstChild) body.removeChild(body.firstChild);
+  bodyElems.forEach(elem => body.append(elem));
+  body.scrollTop = 0;
+  $('#modal').modal('show');
+}
+
+function hideModal() {
+  $('#modal').modal('hide');
+}
+
+/**
+ * Filters object controls creating, removing, editing, and saving the filter
+ * input elements. The only functions that should need to be called from outside
+ * this module are Filters.add() and Filters.remove().
+ */
+const Filters = {
+
+  createLabel(filter) {
+    const label = document.createElement('label');
+    label.className = 'col-sm-3 col-form-label text-truncate';
+    label.innerText = filter.name;
+    label.htmlFor = filter.id;
+    return label;
+  },
+
+  createInput(filter) {
+    const input = document.createElement('input');
+    input.className = 'form-control text-left text-truncate';
+    input.setAttribute('type', 'button');
+    input.onclick = () => this.handleEdit(filter, input);
+    input.dataset.id = filter.id;
+    input.dataset.name = filter.name;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'col-sm-9';
+    wrapper.append(input);
+    return wrapper;
+  },
+
+  createElement(filter) {
+    const elem = document.createElement('div');
+    elem.className = 'form-group row';
+    elem.append(this.createLabel(filter));
+    elem.append(this.createInput(filter));
+    return elem;
+  },
+
+  add(filterPkList) {
+      const sortFunction = (a, b) => (a.name === 'id') ? -1 : a.name.localeCompare(b.name);
+      filterPkList
+        .map(pk => Params.filterProps(pk))
         .sort(sortFunction)
-        .forEach(filter => {
+        .forEach(filter => Elements.filtersList.append(this.createElement(filter)));
+  },
 
-            const label = document.createElement('label');
-            label.className = 'col-sm-3 col-form-label text-truncate';
-            label.innerText = filter.name;
-            label.htmlFor = filter.id;
+  remove() {
+    const filters = Elements.filtersList;
+    while (filters.firstChild) filters.removeChild(filters.firstChild);
+  },
 
-            const input = document.createElement('input');
-            input.className = 'form-control text-left text-truncate';
-            input.setAttribute('type', 'button');
-            input.onclick = () => editFilter(input);
-            input.dataset.id = filter.id;
-            input.dataset.name = filter.name;
-            const inputWrapper = document.createElement('div');
-            inputWrapper.className = 'col-sm-9';
-            inputWrapper.append(input);
-
-            const elem = document.createElement('div');
-            elem.className = 'form-group row';
-            elem.append(label);
-            elem.append(inputWrapper);
-            elements.filtersList.append(elem);
-        });
-}
-
-
-export function remove() {
-    removeAllChildElements(elements.filtersList);
-}
-
-
-function removeAllChildElements(elem) {
-    while (elem.firstChild) {
-        elem.removeChild(elem.firstChild);
-    }
-}
-
-
-async function editFilter(filterInput) {
-
-    const filter = params.filterProps(filterInput.dataset.id);
-
-    const modal = document.getElementById('modal');
-    modal.querySelector('.modal-title').innerText = `Filters: ${filter.name}`;
-    modal.querySelector('#modal-save-btn').onclick = () => handleSaveFilter(filterInput);
-
-    const body = modal.querySelector('.modal-body');
-    removeAllChildElements(body);
-    body.scrollTop = 0;
-
-    const choices = await data.getFilterChoices(filter);
-    const selectedValues = JSON.parse(elements.filters.value)[filter.id] || [];
+  async handleEdit(filter, inputElem) {
+    const modalTitle = `Filters: ${filter.name}`;
+    const handleSaveFunc = () => this.handleSave(filter, inputElem);
+    const choices = await Data.getFilterChoices(filter);
+    const selectedChoices = JSON.parse(Elements.filters.value)[filter.id] || [];
     const ul = document.createElement('ul');
-    ul.style.listStyle = 'none';
     choices.forEach(([value, name]) => {
-        const li = document.createElement('li');
-        const checked = (selectedValues.includes(value)) ? 'checked' : '';
-        const inputHtml = `<input class="form-check-input" type="checkbox" id="${value}" value="${value}" ${checked}>`;
-        const labelHtml = `<label class="form-check-label" for="${value}">${name}</label>`;
-        li.innerHTML = inputHtml + labelHtml;
-        ul.append(li);
+      const li = document.createElement('li');
+      const checked = (selectedChoices.includes(value)) ? 'checked' : '';
+      const inputHtml = `<input class="form-check-input" type="checkbox" id="${value}" value="${value}" ${checked}>`;
+      const labelHtml = `<label class="form-check-label" for="${value}">${name}</label>`;
+      li.innerHTML = inputHtml + labelHtml;
+      ul.append(li);
     });
-    body.append(ul);
+    showModal(modalTitle, handleSaveFunc, [ul]);
+  },
 
-    $('#modal').modal('show');
-}
-
-
-function handleSaveFilter(filterInput) {
-
-    const values = Array.from(document.getElementById('modal').querySelectorAll('input[type=checkbox]'))
+  handleSave(filter, inputElem) {
+    const values = (
+      Array.from(document.getElementById('modal').querySelectorAll('input[type=checkbox]'))
         .filter(elem => elem.checked)
-        .map(elem => elem.value);
+        .map(elem => elem.value)
+    );
+    inputElem.value = values.join(', ');
+    this.updateForm(filter, values);
+    hideModal();
+  },
 
-    // Set the display value to be a comma-separated list 
-    filterInput.value = values.join(',');
-
-    // Store the values in the JSON object associated with the form element.
-    // This is how they get added to the form which django processes
-    const formValue = JSON.parse(elements.filters.value);
+  // Handles updating the hidden form field that's sent with the post request.
+  // The filters are stored in a JSON object which django parses.
+  updateForm(filter, values) {
+    const formValue = JSON.parse(Elements.filters.value);
     if (values.length === 0) {
-        delete formValue[filterInput.dataset.id];
+        delete formValue[filter.id];
     } else {
-        formValue[filterInput.dataset.id] = values;
+        formValue[filter.id] = values;
     }
-    elements.filters.value = JSON.stringify(formValue);
+    Elements.filters.value = JSON.stringify(formValue);
+  },
 
-    // aaaaand of course hide the modal
-    $('#modal').modal('hide');
-}
+};
+
+export default Filters;
