@@ -9,4 +9,5 @@ urlpatterns = [
     path('results/<int:pk>/', views.QueryResults.as_view(), name='results'),
     path('results/<int:pk>/csv/', views.results_as_csv, name='results-csv'),
     path('results/<int:pk>/report/<str:correlations>/', views.results_create_report),
+    path('results/<int:pk>/dtale/', views.results_dtale, name='results-dtale'),
 ]

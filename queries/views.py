@@ -1,4 +1,4 @@
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.http import HttpResponse
 from django.urls import reverse, reverse_lazy
 from django.views import generic
@@ -8,6 +8,7 @@ from .models import Query, QueryFilter, Request
 from params.models import MbtaFilter
 import json
 import logging
+import dtale
 
 
 class QueryCreate(generic.CreateView):
@@ -88,3 +89,14 @@ def results_create_report(request, pk, correlations):
     except Exception as e:
         logging.exception(f'Error creating profile report: {e}')
         return HttpResponse(status=500)
+
+
+def results_dtale(request, pk):
+    """Start up a D-Tale process for the current dataframe and attempt to redirect
+       the user to it."""
+    query = get_object_or_404(Query, pk=pk)
+    results = query.get_results(request, get_from_cache=True)
+    # TODO:
+    #   check if a dtale process for this dataframe already exists...
+    #   manage the number of d-tale processes running...etc.
+    return redirect(dtale.show(results.df, name=pk)._url)
